@@ -25,6 +25,22 @@
   (parent [this] "Return the parent loc of this loc, or nil if this loc is the root")
   (changed? [this] "Return a boolean predicated on this loc having been modified since being added to its parent"))
 
+(defn- make-end
+  "Create a sentinel loc that can only result from navigating beyond the limits of the data structure"
+  [loc]
+  (let [throw! (fn [](throw (ex-info "Operation not allowed on end loc" {:loc loc})))]
+    (reify Zipper
+      (branch? [_] (throw!))
+      (children [_] (throw!))
+      (make-node [_ _ _] (throw!))
+      (node [_] ::end)
+      (rights [_] [loc]) ; the secret back door to return to the zipper
+      (lefts [_] (throw!))
+      (parent [_] (throw!))
+      (changed? [_] (throw!)))))
+
+(defn end? "Returns true if loc represents the end of a depth-first walk" [loc] (= ::end (node loc)))
+
 (defrecord SeqZipper [node lefts parent rights changed?]
   Zipper
   (branch? [this] (seq? node))
@@ -38,9 +54,6 @@
 
 (defn seq-zip [root] (->SeqZipper root [] nil [] false))
 
-;; Sentinels
-(defn end? "Returns true if loc represents the end of a depth-first walk" [loc] (= ::end (parent loc)))
-
 ;; Hierarchical navigation
 (defn up
   "Returns the loc of the parent of the node at this loc, or nil if at the top"
@@ -52,9 +65,11 @@
 (defn down [loc] (when (branch? loc)
                    (let [[child & children] (children loc)]
                      (when child
-                       (->SeqZipper child [] loc (or children ()) false)))))
+                       (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :changed? false)))))
 
-(defn root [loc] (if-let [p (up loc)] (root p) loc))
+(defn root [loc] (if (end? loc)
+                   (first (rights loc))
+                   (if-let [p (up loc)] (root p) loc)))
 
 (defn path [loc]
   (if-let [ploc (parent loc)]
@@ -62,12 +77,16 @@
     []))
 
 ;; Ordered navigation
-(defn left [loc] (let [lefts (lefts loc)]
-                   (when (seq lefts)
-                     (->SeqZipper (peek lefts) (pop lefts) (parent loc) (cons (node loc) (rights loc)) false))))
+(defn left
+  "Return the loc of the left sibling of the node at this loc, or nil"
+  [loc] (let [lefts (lefts loc)]
+          (when (seq lefts)
+            (assoc loc :node (peek lefts) :lefts (pop lefts) :rights (cons (node loc) (rights loc)) :changed? false))))
 
-(defn right [loc] (when-let [[r & rs :as rights] (seq (rights loc))]
-                    (->SeqZipper r (conj (lefts loc) (node loc)) (parent loc) (or rs ()) false)))
+(defn right
+  "Return the loc of the right sibling of the node at this loc, or nil"
+  [loc] (when-let [[r & rs :as rights] (seq (rights loc))]
+          (->SeqZipper r (conj (lefts loc) (node loc)) (parent loc) (or rs ()) false)))
 
 (defn leftmost
   "Returns the loc of the leftmost sibling of the node at this loc, or self"
@@ -127,9 +146,9 @@
      (and (branch? loc) (down loc))
      (right loc)
      (loop [p loc]
-       (if (up p)
-         (or (right (up p)) (recur (up p)))
-         (assoc p :parent ::end))))))
+       (if-let [p' (up p)]
+         (or (right p') (recur p'))
+         (make-end p))))))
 
 (defn prev
   "Moves to the previous loc in the hierarchy, depth-first. If already at the root, returns nil."

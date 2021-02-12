@@ -58,11 +58,15 @@
 
 (deftest seq-zip-iterate
   (let [nroot '(1 2 (31 32) 4)
-        z (seq-zip nroot)]
+        z (seq-zip nroot)
+        step (iterate next z)]
+    (is (not (end? z)))
     (is (= 1 (-> z next node)))
     (is (= '(31 32) (-> z next next next node)))
     (is (= 31 (-> z next next next next node)))
-    (is (= 2 (-> z next next next next prev prev node)))))
+    (is (= 2 (-> z next next next next prev prev node)))
+    (is (-> z next next next next next next next end?))
+    (is (end? (nth step 100)))))
 
 (deftest seq-zip-remove
   (let [nroot '(1 2 (31 32) 4)
