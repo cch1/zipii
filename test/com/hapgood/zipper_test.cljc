@@ -9,14 +9,15 @@
     (is (= nroot (node (seq-zip nroot))))
     (is (branch? (seq-zip nroot)))
     (is (= nroot (children (seq-zip nroot))))
-    (is (= nroot (make-node (seq-zip nroot) [] nroot)))))
+    (is (= nroot (make-node (seq-zip nroot) [] nroot)))
+    (is (nil? (parent (seq-zip nroot))))))
 
 (deftest seq-zip-hierarchical-navigation
   (let [grandchild '((1111) 222)
         child (list grandchild 22)
         nroot (list child 2)
         z (seq-zip nroot)]
-    (is (root? z))
+    (is (= child (-> z down down parent node)))
     (is (empty? (path z)))
     (is (= child (-> z down node)))
     (is (= grandchild (-> z down down node)))
