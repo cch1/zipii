@@ -49,6 +49,8 @@
         z (seq-zip nroot)]
     (is (= '(1 2 (30 31 32) 4) (-> z down right right down (insert-left 30) root node)))
     (is (= '(1 2 (31 32 33) 4) (-> z down right right down right (insert-right 33) root node)))
+    (is (thrown? Exception (-> z (insert-right 33))))
+    (is (thrown? Exception (-> z (insert-left 33))))
     (is (= '(1 2 3 4) (-> z down right right (replace 3) root node)))
     (is (= '(0 2 (31 32) 4) (-> z down (edit dec) root node)))
     (is (= '(0 1 2 (31 32) 4) (-> z (insert-child 0) root node)))
@@ -73,6 +75,7 @@
   (let [nroot '(1 2 (31 32) 4)
         z (seq-zip nroot)]
     (is (= '(1 2 4) (-> z down right right remove root node)))
+    (is (thrown? Exception (-> z remove)))
     (is (= '(1 2 () 4) (-> z down right right down right remove remove root node)))
     (is (= `(1 2 4) (-> z down right right down right remove remove remove root node)))
     ;; This next one exposes a bug in clojure.zip...
