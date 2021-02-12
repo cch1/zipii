@@ -61,6 +61,7 @@
         z (seq-zip nroot)
         step (iterate next z)]
     (is (not (end? z)))
+    (is (nil? (prev z)))
     (is (= 1 (-> z next node)))
     (is (= '(31 32) (-> z next next next node)))
     (is (= 31 (-> z next next next next node)))
