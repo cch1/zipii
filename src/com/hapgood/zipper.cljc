@@ -2,7 +2,9 @@
   (:refer-clojure :exclude (replace remove next))
   (:require [clojure.zip :as z]))
 
-;; Issues with original implementation
+;; Reference: https://www.st.cs.uni-saarland.de//edu/seminare/2005/advanced-fp/docs/huet-zipper.pdf
+
+;; Issues with implementation by Hickey
 ;; 1. The `changed?` attribute is not carefully propogated when moving laterally, which is unexpected & inefficient when zipping up "changes".
 ;; 2. The use of metadata seems less idiomatic than a protocol & defrecord.  Performance may or may not suffer -TBD.
 ;; 3. Sentinel values like `:end` and `nil` are less idiomatic than namespaced keywords.
