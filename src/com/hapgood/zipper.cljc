@@ -171,4 +171,4 @@
           (if-let [child (and (branch? loc) (down loc))]
             (recur (rightmost child))
             loc))
-        (assoc (parent loc) :node (make-node loc (node (parent loc)) (rights loc)) :changed? true)))))
+        (replace (parent loc) (make-node loc (node (parent loc)) (rights loc)))))))
