@@ -54,12 +54,17 @@
 
 (defn seq-zip [root] (->SeqZipper root [] nil [] false))
 
+(defn replace
+  "Replace the node at this loc, without moving"
+  [loc node]
+  (assoc loc :node node :changed? true))
+
 ;; Hierarchical navigation
 (defn up
   "Returns the loc of the parent of the node at this loc, or nil if at the top"
   [loc] (when-let [ploc (parent loc)]
           (if (changed? loc)
-            (assoc ploc :node (make-node loc (node ploc) (concat (lefts loc) (cons (node loc) (rights loc)))) :changed? true)
+            (replace ploc (make-node loc (node ploc) (concat (lefts loc) (cons (node loc) (rights loc)))))
             ploc)))
 
 (defn down [loc] (when (branch? loc)
@@ -115,11 +120,6 @@
   (if (empty? (path loc))
     (throw (new Exception "Insert at top"))
     (assoc loc :rights (cons item (rights loc)) :changed? true)))
-
-(defn replace
-  "Replace the node at this loc, without moving"
-  [loc node]
-  (assoc loc :node node :changed? true))
 
 (defn edit
   "Replace the node at this loc with the value of (f node args)"
