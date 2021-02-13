@@ -10,11 +10,6 @@
 ;; 3. Sentinel values like `:end` and `nil` are less idiomatic than namespaced keywords.
 ;; 4. The term `path` as the conjugate of node in the code is misleading... it's a position, not just a trail of how one got to the current position.
 
-(defn queue
-  ([] (clojure.lang.PersistentQueue/EMPTY))
-  ([coll]
-   (reduce conj clojure.lang.PersistentQueue/EMPTY coll)))
-
 (defprotocol Zipper
   (branch? [this] "Returns true if the node at this loc is a branch")
   (children [this] "Returns a seq of the children of the node at this loc")
