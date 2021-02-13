@@ -25,15 +25,17 @@
 (defn- make-end
   "Create a sentinel loc that can only result from navigating beyond the limits of the data structure"
   [loc]
-  (let [throw! (fn [](throw (ex-info "Operation not allowed on end loc" {:loc loc})))]
-    (reify Loc
-      (node [_] ::end)
-      (rights [_] [loc]) ; the secret back door to return to the zipper
-      (lefts [_] (throw!))
-      (parent [_] (throw!))
-      (changed? [_] (throw!)))))
+  (let [throw! (fn [](throw (ex-info "Operation not allowed on end loc" {::root loc})))]
+    ^{::end loc} (reify Loc
+                   (node [_] (throw!))
+                   (rights [_] (throw!))
+                   (lefts [_] (throw!))
+                   (parent [_] (throw!))
+                   (changed? [_] (throw!)))))
 
-(defn end? "Returns true if loc represents the end of a depth-first walk" [loc] (= ::end (node loc)))
+(def end?
+  "Returns wormholed loc (a true value) if loc represents the end of a depth-first walk, otherwise nil"
+  (comp ::end meta))
 
 (defrecord SeqZipper [node lefts parent rights changed?]
   Zipper
@@ -67,9 +69,7 @@
                      (when child
                        (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :changed? false)))))
 
-(defn root [loc] (if (end? loc)
-                   (first (rights loc))
-                   (if-let [p (up loc)] (root p) loc)))
+(defn root [loc] (or (end? loc) (if-let [p (up loc)] (root p) loc)))
 
 (defn path [loc]
   (if-let [ploc (parent loc)]
