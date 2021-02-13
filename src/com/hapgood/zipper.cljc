@@ -18,7 +18,9 @@
 (defprotocol Zipper
   (branch? [this] "Returns true if the node at this loc is a branch")
   (children [this] "Returns a seq of the children of the node at this loc")
-  (make-node [this node children] "Returns a new branch node, given an existing node and new children")
+  (make-node [this node children] "Returns a new branch node, given an existing node and new children"))
+
+(defprotocol Loc
   (node [this] "Return the node at this loc")
   (rights [this] "Return a seq of the right siblings of this loc")
   (lefts [this] "Return a seq of the left siblings of this loc")
@@ -29,10 +31,7 @@
   "Create a sentinel loc that can only result from navigating beyond the limits of the data structure"
   [loc]
   (let [throw! (fn [](throw (ex-info "Operation not allowed on end loc" {:loc loc})))]
-    (reify Zipper
-      (branch? [_] (throw!))
-      (children [_] (throw!))
-      (make-node [_ _ _] (throw!))
+    (reify Loc
       (node [_] ::end)
       (rights [_] [loc]) ; the secret back door to return to the zipper
       (lefts [_] (throw!))
@@ -46,9 +45,10 @@
   (branch? [this] (seq? node))
   (children [this] node)
   (make-node [this node children] (with-meta children (meta node)))
+  Loc
   (node [this] node)
-  (rights [this] rights)
   (lefts [this] lefts)
+  (rights [this] rights)
   (parent [this] parent)
   (changed? [this] changed?))
 
