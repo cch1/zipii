@@ -91,20 +91,20 @@
 (defn right
   "Return the loc of the right sibling of the node at this loc, or nil"
   [loc] (when-let [[r & rs :as rights] (seq (rights loc))]
-          (->SeqZipper r (conj (lefts loc) (node loc)) (parent loc) (or rs ()) false)))
+          (assoc loc :node r :lefts (conj (lefts loc) (node loc)) :rights (or rs ()) :changed? false)))
 
 (defn leftmost
   "Returns the loc of the leftmost sibling of the node at this loc, or self"
   [loc]
   (if-let [lefts (seq (lefts loc))]
-    (->SeqZipper (first lefts) [] (parent loc) (concat (rest lefts) [(node loc)] (rights loc)) false)
+    (assoc loc :node (first lefts) :lefts [] :rights (concat (rest lefts) [(node loc)] (rights loc)))
     loc))
 
 (defn rightmost
   "Returns the loc of the leftmost sibling of the node at this loc, or self"
   [loc]
   (if-let [rights (seq (rights loc))]
-    (->SeqZipper (last rights) (apply conj (lefts loc) (node loc) (butlast rights)) (parent loc) [] false)
+    (assoc loc :node (last rights) :lefts (apply conj (lefts loc) (node loc) (butlast rights)) :rights [])
     loc))
 
 (defn insert-left
