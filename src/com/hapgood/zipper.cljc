@@ -15,7 +15,7 @@
   (children [this] "Returns a seq of the children of the node at this loc")
   (make-node [this node children] "Returns a new branch node, given an existing node and new children"))
 
-(defprotocol Loc
+(defprotocol Loc ; also requires implementation to be associative for these named accessors
   (node [this] "Return the node at this loc")
   (rights [this] "Return a seq of the right siblings of this loc")
   (lefts [this] "Return a seq of the left siblings of this loc")

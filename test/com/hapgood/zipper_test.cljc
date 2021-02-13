@@ -4,12 +4,13 @@
             [clojure.test :refer [deftest is]])
   (:refer-clojure :exclude (replace remove next)))
 
+;; SeqZipper
 (deftest seq-zip-Zipper
   (let [nroot '(0 1 2 (20 21) 3 (30 31 (310)))]
     (is (= nroot (node (seq-zip nroot))))
     (is (branch? (seq-zip nroot)))
     (is (= nroot (children (seq-zip nroot))))
-    (is (= nroot (make-node (seq-zip nroot) [] nroot)))
+    (is (= nroot (make-node (seq-zip nroot) () nroot)))
     (is (nil? (parent (seq-zip nroot))))))
 
 (deftest seq-zip-hierarchical-navigation
