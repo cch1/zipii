@@ -53,10 +53,11 @@
 
 (defn down
   "Return the loc of the leftmost child of the node at this loc, or nil if no children"
-  [loc] (when (branch? loc)
-          (let [[child & children] (children loc)]
-            (when child
-              (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :changed? false)))))
+  [loc]
+  (when (branch? loc)
+    (let [[child & children] (children loc)]
+      (when child
+        (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :changed? false)))))
 
 (defn root
   "Zip all the way up and return the root node, reflecting any changes."
@@ -196,3 +197,22 @@
   "Return a zipper for nested maps, given a root map"
   ([root] (map-zip ::map-zip-root root))
   ([root-key root] (->MapZipper (clojure.lang.MapEntry. root-key root) [] nil [] false)))
+
+(defn down-to
+  [loc k]
+  (when (branch? loc)
+    (let [m (val (node loc))
+          mv (vec m)]
+      (when-let [[k v :as e] (.entryAt m k)]
+        (let [i (.indexOf mv e)]
+          (let [lefts (subvec mv 0 i) rights (subvec mv (inc i))]
+            (assoc loc :node e :lefts lefts :parent loc :rights rights :changed? false)))))))
+
+(defn over-to
+  [loc k]
+  (let [m (into {} (concat (lefts loc) (rights loc)))
+        mv (vec m)]
+    (when-let [[k v :as e] (.entryAt m k)]
+      (let [i (.indexOf mv e)]
+        (let [lefts (subvec mv 0 i) rights (subvec mv (inc i))]
+          (assoc loc :node e :lefts lefts :parent loc :rights rights :changed? false))))))

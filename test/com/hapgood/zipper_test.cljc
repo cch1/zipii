@@ -159,3 +159,14 @@
     (is (= [::root {:a 1 :b 2 :c {} :f 5}] (-> z down right right down right remove remove root node)))
     (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right down right remove remove remove root node)))
     (is (= [::root {}] (-> (map-zip ::root {:a 1}) down remove node)))))
+
+(deftest map-zip-key-navigation
+  (let [grandchild {:a00 130 :a01 131}
+        child {:a0 10 :a1 11 :a2 12 :a3 grandchild :a4 14}
+        nroot {:a child :b 2}
+        z (map-zip ::root nroot)]
+    (is (= [:a child] (-> z (down-to :a) node)))
+    (is (= [:a00 130] (-> z (down-to :a) (down-to :a3) (down-to :a00) node)))
+    (is (= [:a01 131] (-> z (down-to :a) (down-to :a3) (down-to :a00) (over-to :a01) node)))
+    (is (nil? (-> z (down-to :c))))
+    (is (nil? (-> z (down-to :a) (over-to :c))))))
