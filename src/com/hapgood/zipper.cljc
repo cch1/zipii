@@ -7,13 +7,14 @@
 ;; Issues with implementation by Hickey
 ;; 1. The `changed?` attribute is not carefully propogated when moving laterally, which is unexpected & inefficient when zipping up "changes".
 ;; 2. The use of metadata seems less idiomatic than a protocol & defrecord.  Performance may or may not suffer -TBD.
-;; 3. Sentinel values like `:end` and `nil` are less idiomatic than namespaced keywords.
+;; 3. Sentinel values like `:end` and `nil` are less idiomatic than namespaced keywords and sentinel objects.
 ;; 4. The term `path` as the conjugate of node in the code is misleading... it's a position, not just a trail of how one got to the current position.
+;; 5. There is a bug in the original implementation when deleting the last child of the root.
 
 (defprotocol Zipper
-  (branch? [this] "Returns true if the node at this loc is a branch")
-  (children [this] "Returns a seq of the children of the node at this loc")
-  (make-node [this node children] "Returns a new branch node, given an existing node and new children"))
+  (branch? [this] "Return true if the node at this loc is a branch")
+  (children [this] "Return a seq of the children of the node at this loc, which must be a branch")
+  (make-node [this node children] "Return a new branch node, given an existing node and new children"))
 
 (defprotocol Loc ; also requires implementation to be associative for these named accessors
   (node [this] "Return the node at this loc")
@@ -34,7 +35,7 @@
                    (changed? [_] (throw!)))))
 
 (def end?
-  "Returns wormholed loc (a true value) if loc represents the end of a depth-first walk, otherwise nil"
+  "Return wormholed loc if loc represents the end of a depth-first walk, otherwise nil"
   (comp ::end meta))
 
 (defn replace
@@ -50,14 +51,21 @@
             (replace ploc (make-node loc (node ploc) (concat (lefts loc) (cons (node loc) (rights loc)))))
             ploc)))
 
-(defn down [loc] (when (branch? loc)
-                   (let [[child & children] (children loc)]
-                     (when child
-                       (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :changed? false)))))
+(defn down
+  "Return the loc of the leftmost child of the node at this loc, or nil if no children"
+  [loc] (when (branch? loc)
+          (let [[child & children] (children loc)]
+            (when child
+              (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :changed? false)))))
 
-(defn root [loc] (or (end? loc) (if-let [p (up loc)] (root p) loc)))
+(defn root
+  "Zip all the way up and return the root node, reflecting any changes."
+  [loc]
+  (or (end? loc) (if-let [p (up loc)] (root p) loc)))
 
-(defn path [loc]
+(defn path
+  "Return a seq of nodes leading to this loc"
+  [loc]
   (if-let [ploc (parent loc)]
     (conj (path ploc) (node ploc))
     []))
@@ -65,14 +73,16 @@
 ;; Ordered navigation
 (defn left
   "Return the loc of the left sibling of the node at this loc, or nil"
-  [loc] (let [lefts (lefts loc)]
-          (when (seq lefts)
-            (assoc loc :node (peek lefts) :lefts (pop lefts) :rights (cons (node loc) (rights loc)) :changed? false))))
+  [loc]
+  (let [lefts (lefts loc)]
+    (when (seq lefts)
+      (assoc loc :node (peek lefts) :lefts (pop lefts) :rights (cons (node loc) (rights loc)) :changed? false))))
 
 (defn right
   "Return the loc of the right sibling of the node at this loc, or nil"
-  [loc] (when-let [[r & rs :as rights] (seq (rights loc))]
-          (assoc loc :node r :lefts (conj (lefts loc) (node loc)) :rights (or rs ()) :changed? false)))
+  [loc]
+  (when-let [[r & rs :as rights] (seq (rights loc))]
+    (assoc loc :node r :lefts (conj (lefts loc) (node loc)) :rights (or rs ()) :changed? false)))
 
 (defn leftmost
   "Returns the loc of the leftmost sibling of the node at this loc, or self"
@@ -142,7 +152,7 @@
     (up loc)))
 
 (defn remove
-  "Removes the node at loc, returning the loc that would have preceded it in a depth-first walk."
+  "Remove the node at loc, returning the loc that would have preceded it in a depth-first walk."
   [loc]
   (let [lefts (lefts loc)]
     (if (empty? (path loc))
@@ -166,7 +176,9 @@
   (parent [this] parent)
   (changed? [this] changed?))
 
-(defn seq-zip [root] (->SeqZipper root [] nil [] false))
+(defn seq-zip
+  "Return a zipper for nested maps, given a root map"
+  [root] (->SeqZipper root [] nil [] false))
 
 (defrecord MapZipper [node lefts parent rights changed?]
   Zipper
@@ -181,5 +193,6 @@
   (changed? [this] changed?))
 
 (defn map-zip
+  "Return a zipper for nested maps, given a root map"
   ([root] (map-zip ::map-zip-root root))
   ([root-key root] (->MapZipper (clojure.lang.MapEntry. root-key root) [] nil [] false)))
