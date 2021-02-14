@@ -37,20 +37,6 @@
   "Returns wormholed loc (a true value) if loc represents the end of a depth-first walk, otherwise nil"
   (comp ::end meta))
 
-(defrecord SeqZipper [node lefts parent rights changed?]
-  Zipper
-  (branch? [this] (seq? node))
-  (children [this] node)
-  (make-node [this node children] (with-meta children (meta node)))
-  Loc
-  (node [this] node)
-  (lefts [this] lefts)
-  (rights [this] rights)
-  (parent [this] parent)
-  (changed? [this] changed?))
-
-(defn seq-zip [root] (->SeqZipper root [] nil [] false))
-
 (defn replace
   "Replace the node at this loc, without moving"
   [loc node]
@@ -167,3 +153,33 @@
             (recur (rightmost child))
             loc))
         (replace (parent loc) (make-node loc (node (parent loc)) (rights loc)))))))
+
+(defrecord SeqZipper [node lefts parent rights changed?]
+  Zipper
+  (branch? [this] (seq? node))
+  (children [this] node)
+  (make-node [this node children] (with-meta children (meta node)))
+  Loc
+  (node [this] node)
+  (lefts [this] lefts)
+  (rights [this] rights)
+  (parent [this] parent)
+  (changed? [this] changed?))
+
+(defn seq-zip [root] (->SeqZipper root [] nil [] false))
+
+(defrecord MapZipper [node lefts parent rights changed?]
+  Zipper
+  (branch? [this] ((comp map? val) node))
+  (children [this] ((comp seq val) node))
+  (make-node [this [k children :as node] children'] (clojure.lang.MapEntry. k (into {} children')))
+  Loc
+  (node [this] node)
+  (lefts [this] lefts)
+  (rights [this] rights)
+  (parent [this] parent)
+  (changed? [this] changed?))
+
+(defn map-zip
+  ([root] (map-zip ::map-zip-root root))
+  ([root-key root] (->MapZipper (clojure.lang.MapEntry. root-key root) [] nil [] false)))
