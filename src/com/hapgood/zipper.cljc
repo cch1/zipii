@@ -214,21 +214,26 @@
   "Return a zipper for nested vectors, given a root vector"
   [root] (->VecZipper root []  nil [] false))
 
+(defprotocol ChildrenByName
+  (pivot [loc cname] "Return a triple of [children-before pivot-child children-after"))
+
+(extend-protocol ChildrenByName
+  MapZipper
+  (pivot [this k]
+    (let [children (children this)]
+      (when-let [pivot (find children k)]
+        (let [v (vec children)
+              i (.indexOf (keys children) k)]
+          [(into {} (subvec v 0 i)) pivot (into {} (subvec v (inc i)))]))))
+  VecZipper
+  (pivot [this k]
+    (let [children (children this)]
+      (when-let [[k v] (find children k)]
+        [(subvec children 0 k) v (subvec children (inc k))]))))
+
 (defn down-to
+  "Return the loc of the child named by `k`"
   [loc k]
   (when (branch? loc)
-    (let [m (val (node loc))
-          mv (vec m)]
-      (when-let [[k v :as e] (.entryAt m k)]
-        (let [i (.indexOf mv e)]
-          (let [lefts (subvec mv 0 i) rights (subvec mv (inc i))]
-            (assoc loc :node e :lefts lefts :parent loc :rights rights :changed? false)))))))
-
-(defn over-to
-  [loc k]
-  (let [m (into {} (concat (lefts loc) (rights loc)))
-        mv (vec m)]
-    (when-let [[k v :as e] (.entryAt m k)]
-      (let [i (.indexOf mv e)]
-        (let [lefts (subvec mv 0 i) rights (subvec mv (inc i))]
-          (assoc loc :node e :lefts lefts :parent loc :rights rights :changed? false))))))
+    (when-let [[lefts node rights] (pivot loc k)]
+      (assoc loc :node node :lefts lefts :parent loc :rights rights :changed? false))))

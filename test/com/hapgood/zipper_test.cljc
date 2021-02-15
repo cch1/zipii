@@ -160,26 +160,6 @@
     (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right down right remove remove remove root node)))
     (is (= [::root {}] (-> (map-zip ::root {:a 1}) down remove node)))))
 
-(deftest map-zip-key-navigation
-  (let [grandchild {:a00 130 :a01 131}
-        child {:a0 10 :a1 11 :a2 12 :a3 grandchild :a4 14}
-        nroot {:a child :b 2}
-        z (map-zip ::root nroot)]
-    (is (= [:a child] (-> z (down-to :a) node)))
-    (is (= [:a00 130] (-> z (down-to :a) (down-to :a3) (down-to :a00) node)))
-    (is (= [:a01 131] (-> z (down-to :a) (down-to :a3) (down-to :a00) (over-to :a01) node)))
-    (is (nil? (-> z (down-to :c))))
-    (is (nil? (-> z (down-to :a) (over-to :c))))))
-
-
-
-
-
-
-
-
-
-
 ;; VecZipper
 (deftest vec-zip-Zipper
   (let [nroot [0 1 2 [20 21] 3 [30 31 [310]]]]
@@ -256,3 +236,22 @@
     (is (= [1 2 [] 4] (-> z down right right down right remove remove root node)))
     (is (= [1 2 4] (-> z down right right down right remove remove remove root node)))
     (is (= [] (-> (vec-zip [0]) down remove node)))))
+
+;; index/key navigation
+(deftest map-zip-key-navigation
+  (let [grandchild {:a00 130 :a01 131}
+        child {:a0 10 :a1 11 :a2 12 :a3 grandchild :a4 14}
+        nroot {:a child :b 2}
+        z (map-zip ::root nroot)]
+    (is (= [:a child] (-> z (down-to :a) node)))
+    (is (= [:a00 130] (-> z (down-to :a) (down-to :a3) (down-to :a00) node)))
+    (is (nil? (-> z (down-to :c))))))
+
+(deftest vec-zip-index-navigation
+  (let [grandchild [130 131]
+        child [10 11 12 grandchild 14]
+        nroot [child 2]
+        z (vec-zip nroot)]
+    (is (= child (-> z (down-to 0) node)))
+    (is (= 130 (-> z (down-to 0) (down-to 3) (down-to 0) node)))
+    (is (nil? (-> z (down-to 9))))))
