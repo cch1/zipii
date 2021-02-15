@@ -5,11 +5,12 @@
 ;; Reference: https://www.st.cs.uni-saarland.de//edu/seminare/2005/advanced-fp/docs/huet-zipper.pdf
 
 ;; Issues with implementation by Hickey
-;; 1. The `changed?` attribute is not carefully propogated when moving laterally, which is unexpected & inefficient when zipping up "changes".
-;; 2. The use of metadata seems less idiomatic than a protocol & defrecord.  Performance may or may not suffer -TBD.
-;; 3. Sentinel values like `:end` and `nil` are less idiomatic than namespaced keywords and sentinel objects.
-;; 4. The term `path` as the conjugate of node in the code is misleading... it's a position, not just a trail of how one got to the current position.
-;; 5. There is a bug in the original implementation when deleting the last child of the root.
+;; 1. The use of metadata "seems" less idiomatic than a protocol & defrecord.  Performance may or may not suffer (TBD) but the syntax with protocols more closely matches the intent of the code, in my opinion.
+;; 2. Sentinel values like `:end` and `nil` "seem" less idiomatic than namespaced keywords and sentinel objects.
+;; 3. The term `path` as the conjugate of node in the code seems misleading... it's a position, not a trail of how one got to the current position.
+;; 4. There is a bug in the original implementation when deleting the last child of the root in a seq-zip.
+;; 5. The functionality provided by the `pnodes` and `ppath` overlap sufficiently that just a single reference to the parent loc (ppath) suffices.
+;; 6. The `root` function complects `move` and `return-updated-data-structure`.  In fact, there is no (simple) way to move to the root without also exiting the zipper.  This is surprising and it's not too hard to string together `root` followed by `node` to accomplish the combined effect.
 
 (defprotocol Zipper
   (branch? [this] "Return true if the node at this loc is a branch")
@@ -45,7 +46,7 @@
 
 ;; Hierarchical navigation
 (defn up
-  "Returns the loc of the parent of the node at this loc, or nil if at the top"
+  "Returns the loc of the parent of the node at this loc (reflecting any changes), or nil if at the top"
   [loc] (when-let [ploc (parent loc)]
           (if (changed? loc)
             (replace ploc (make-node loc (node ploc) (concat (lefts loc) (cons (node loc) (rights loc)))))
