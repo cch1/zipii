@@ -13,13 +13,13 @@
 
 (defprotocol Zipper
   (branch? [this] "Return true if the node at this loc is a branch")
-  (children [this] "Return a seq of the children of the node at this loc, which must be a branch")
+  (children [this] "Return a seqable of the children of the node at this loc, which must be a branch")
   (make-node [this node children] "Return a new branch node, given an existing node and new children"))
 
 (defprotocol Loc ; also requires implementation to be associative for these named accessors
   (node [this] "Return the node at this loc")
-  (rights [this] "Return a seq of the right siblings of this loc")
-  (lefts [this] "Return a seq of the left siblings of this loc")
+  (rights [this] "Return a seqable of the right siblings of this loc")
+  (lefts [this] "Return a seqable of the left siblings of this loc")
   (parent [this] "Return the parent loc of this loc, or nil if this loc is the root")
   (changed? [this] "Return a boolean predicated on this loc having been modified since being added to its parent"))
 
@@ -184,7 +184,7 @@
 (defrecord MapZipper [node lefts parent rights changed?]
   Zipper
   (branch? [this] ((comp map? val) node))
-  (children [this] ((comp seq val) node))
+  (children [this] (val node))
   (make-node [this [k children :as node] children'] (clojure.lang.MapEntry. k (into {} children')))
   Loc
   (node [this] node)
@@ -201,7 +201,7 @@
 (defrecord VecZipper [node lefts parent rights changed?]
   Zipper
   (branch? [this] (vector? node))
-  (children [this] (seq node))
+  (children [this] node)
   (make-node [this children children'] (vec children'))
   Loc
   (node [this] node)

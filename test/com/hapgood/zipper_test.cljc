@@ -88,7 +88,7 @@
     (is (= nroot (val (node (map-zip nroot)))))
     (is (= [::root nroot] (node (map-zip ::root nroot))))
     (is (branch? (map-zip nroot)))
-    (is (= (seq nroot) (children (map-zip nroot))))
+    (is (= nroot (children (map-zip nroot))))
     #_ (is (= nroot (let [nzip (map-zip nroot)] (make-node nzip (node nroot) nroot))))
     (is (nil? (parent (map-zip nroot))))))
 
