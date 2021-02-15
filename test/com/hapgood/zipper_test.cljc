@@ -170,3 +170,89 @@
     (is (= [:a01 131] (-> z (down-to :a) (down-to :a3) (down-to :a00) (over-to :a01) node)))
     (is (nil? (-> z (down-to :c))))
     (is (nil? (-> z (down-to :a) (over-to :c))))))
+
+
+
+
+
+
+
+
+
+
+;; VecZipper
+(deftest vec-zip-Zipper
+  (let [nroot [0 1 2 [20 21] 3 [30 31 [310]]]]
+    (is (= nroot (node (vec-zip nroot))))
+    (is (branch? (vec-zip nroot)))
+    (is (= nroot (children (vec-zip nroot))))
+    (is (= nroot (make-node (vec-zip nroot) [] nroot)))
+    (is (nil? (parent (vec-zip nroot))))))
+
+(deftest vec-zip-hierarchical-navigation
+  (let [grandchild [[1111] 222]
+        child [grandchild 22]
+        nroot [child 2]
+        z (vec-zip nroot)]
+    (is (= child (-> z down down parent node)))
+    (is (empty? (path z)))
+    (is (= child (-> z down node)))
+    (is (= grandchild (-> z down down node)))
+    (is (= nroot (-> z down up node)))
+    (is (= nroot (-> z down down root node)))
+    (is (= [nroot child] (-> z down down path)))
+    (is (nil? (-> z up)))
+    (is (nil? (-> z down down down down down)))))
+
+(deftest vec-zip-ordered-navigation
+  (let [nroot [1 2 3 4]
+        z (vec-zip nroot)]
+    (is (nil? (-> z right)))
+    (is (nil? (-> z left)))
+    (is (= 2 (-> z down right node)))
+    (is (nil? (-> z down right right right right)))
+    (is (= (-> z down) (-> z down right left)))
+    (is (nil? (-> z down left)))
+    (is (= (-> z down right right right)
+           (-> z down right right right rightmost)
+           (-> z down rightmost)
+           (-> z down rightmost rightmost)))
+    (is (= (-> z down right right right leftmost)
+           (-> z down leftmost)
+           (-> z down leftmost leftmost)))))
+
+(deftest vec-zip-update
+  (let [nroot [1 2 [31 32] 4]
+        z (vec-zip nroot)]
+    (is (= [1 2 [30 31 32] 4] (-> z down right right down (insert-left 30) root node)))
+    (is (= [1 2 [31 32 33] 4] (-> z down right right down right (insert-right 33) root node)))
+    (is (thrown? Exception (-> z (insert-right 33))))
+    (is (thrown? Exception (-> z (insert-left 33))))
+    (is (= [1 2 3 4] (-> z down right right (replace 3) root node)))
+    (is (= [0 2 [31 32] 4] (-> z down (edit dec) root node)))
+    (is (= [0 1 2 [31 32] 4] (-> z (insert-child 0) root node)))
+    (is (= [1] (-> (seq-zip '()) (insert-child 1) node)))
+    (is (= [1 2 [31 32] 4 5] (-> z (append-child 5) root node)))
+    (is (= [1] (-> (seq-zip []) (append-child 1) node)))))
+
+(deftest vec-zip-iterate
+  (let [nroot [1 2 [31 32] 4]
+        z (vec-zip nroot)
+        step (iterate next z)]
+    (is (not (end? z)))
+    (is (nil? (prev z)))
+    (is (= 1 (-> z next node)))
+    (is (= [31 32] (-> z next next next node)))
+    (is (= 31 (-> z next next next next node)))
+    (is (= 2 (-> z next next next next prev prev node)))
+    (is (-> z next next next next next next next end?))
+    (is (end? (nth step 100)))))
+
+(deftest vec-zip-remove
+  (let [nroot [1 2 [31 32] 4]
+        z (vec-zip nroot)]
+    (is (= [1 2 4] (-> z down right right remove root node)))
+    (is (thrown? Exception (-> z remove)))
+    (is (= [1 2 [] 4] (-> z down right right down right remove remove root node)))
+    (is (= [1 2 4] (-> z down right right down right remove remove remove root node)))
+    (is (= [] (-> (vec-zip [0]) down remove node)))))

@@ -198,6 +198,22 @@
   ([root] (map-zip ::map-zip-root root))
   ([root-key root] (->MapZipper (clojure.lang.MapEntry. root-key root) [] nil [] false)))
 
+(defrecord VecZipper [node lefts parent rights changed?]
+  Zipper
+  (branch? [this] (vector? node))
+  (children [this] (seq node))
+  (make-node [this children children'] (vec children'))
+  Loc
+  (node [this] node)
+  (lefts [this] lefts)
+  (rights [this] rights)
+  (parent [this] parent)
+  (changed? [this] changed?))
+
+(defn vec-zip
+  "Return a zipper for nested vectors, given a root vector"
+  [root] (->VecZipper root []  nil [] false))
+
 (defn down-to
   [loc k]
   (when (branch? loc)
