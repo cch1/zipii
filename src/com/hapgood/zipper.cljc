@@ -6,127 +6,124 @@
 ;; Issues with implementation by Hickey
 ;; 1. The use of metadata "seems" less idiomatic than a protocol & defrecord.  Performance may or may not suffer (TBD) but the syntax with protocols more closely matches the intent of the code, in my opinion.
 ;; 2. Sentinel values like `:end` and `nil` "seem" less idiomatic than namespaced keywords and sentinel objects.
-;; 3. The term `path` as the conjugate of node in the code seems misleading... it's a position, not a trail of how one got to the current position.
 ;; 4. There is a bug in the original implementation when deleting the last child of the root in a seq-zip.
 ;; 5. The functionality provided by the `pnodes` and `ppath` overlap sufficiently that just a single reference to the parent loc (ppath) suffices.
-;; 6. The `root` function complects `move` and `return-updated-data-structure`.  In fact, there is no (simple) way to move to the root without also exiting the zipper.  This is surprising and it's not too hard to string together `root` followed by `node` to accomplish the combined effect.
+;; 6. The `root` function complects `move` and `return-updated-data-structure`.  In fact, there is no (simple) way to move to the root without also exiting the zipper.  This is surprising and it's not too hard to string together `root` followed by `item` to accomplish the combined effect.
 
 (defprotocol Zipper
-  (branch? [this] "Return true if the node at this loc is a branch")
-  (children [this] "Return a seqable of the children of the node at this loc, which must be a branch")
-  (make-node [this node children] "Return a new branch node, given an existing node and new children"))
+  (branch? [this] "Return true if the tree of this loc is a branch")
+  (children [this] "Return a seqable of the children of the tree of this loc, which must be a branch")
+  (make-tree [this tree children] "Return a new subtree, given an existing subtree and new children")
+  (tree [this] "Return the tree of this loc")
+  (dirty-generation? [this] "Return a boolean predicated on a tree in this loc's generation having been changed"))
 
-(defprotocol Loc ; also requires implementation to be associative for these named accessors
-  (node [this] "Return the node at this loc")
-  (rights [this] "Return a seqable of the right siblings of this loc")
-  (lefts [this] "Return a seqable of the left siblings of this loc")
+(defprotocol Node ; also requires implementation to be associative for these named accessors
+  (lefts [this] "Return a seqable of the left siblings of tree of this loc")
   (parent [this] "Return the parent loc of this loc, or nil if this loc is the root")
-  (dirty-generation? [this] "Return a boolean predicated on a node in this loc's generation having been changed"))
+  (rights [this] "Return a seqable of the right siblings of the tree of this loc"))
 
 (defn- make-end
   "Create a sentinel loc that can only result from navigating beyond the limits of the data structure"
   [loc]
   (let [throw! (fn [](throw (ex-info "Operation not allowed on end loc" {::root loc})))]
-    ^{::end loc} (reify Loc
-                   (node [_] (throw!))
-                   (rights [_] (throw!))
+    ^{::end loc} (reify Node
                    (lefts [_] (throw!))
                    (parent [_] (throw!))
-                   (dirty-generation? [_] (throw!)))))
+                   (rights [_] (throw!)))))
 
 (def end?
   "Return wormholed loc if loc represents the end of a depth-first walk, otherwise nil"
   (comp ::end meta))
 
 (defn replace
-  "Replace the node at this loc, without moving"
-  [loc node]
-  (assoc loc :node node :dirty-generation? true))
+  "Replace the tree at this loc, without moving"
+  [loc tree]
+  (assoc loc :tree tree :dirty-generation? true))
 
 ;; Hierarchical navigation
 (defn up
-  "Returns the loc of the parent of the node at this loc (reflecting any changes), or nil if at the top"
+  "Returns the loc of the parent of the tree at this loc (reflecting any changes), or nil if at the top"
   [loc] (when-let [ploc (parent loc)]
           (if (dirty-generation? loc)
-            (replace ploc (make-node loc (node ploc) (concat (lefts loc) (cons (node loc) (rights loc)))))
+            (replace ploc (make-tree loc (tree ploc) (concat (lefts loc) (cons (tree loc) (rights loc)))))
             ploc)))
 
 (defn down
-  "Return the loc of the leftmost child of the node at this loc, or nil if no children"
+  "Return the loc of the leftmost child of the tree at this loc, or nil if no children"
   [loc]
   (when (branch? loc)
     (let [[child & children] (children loc)]
       (when child
-        (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :dirty-generation? false)))))
+        (assoc loc :tree child :lefts [] :parent loc :rights (or children ()) :dirty-generation? false)))))
 
 (defn root
-  "Zip all the way up and return the root node, reflecting any changes."
+  "Zip all the way up and return the loc of the root, reflecting any changes."
   [loc]
   (or (end? loc) (if-let [p (up loc)] (root p) loc)))
 
 (defn path
-  "Return a seq of nodes leading to this loc"
+  "Return a seq of trees leading to this loc"
   [loc]
   (if-let [ploc (parent loc)]
-    (conj (path ploc) (node ploc))
+    (conj (path ploc) (tree ploc))
     []))
 
 ;; Ordered navigation
 (defn left
-  "Return the loc of the left sibling of the node at this loc, or nil"
+  "Return the loc of the left sibling of the tree at this loc, or nil"
   [loc]
   (let [lefts (lefts loc)]
     (when (seq lefts)
-      (assoc loc :node (peek lefts) :lefts (pop lefts) :rights (cons (node loc) (rights loc))))))
+      (assoc loc :tree (peek lefts) :lefts (pop lefts) :rights (cons (tree loc) (rights loc))))))
 
 (defn right
-  "Return the loc of the right sibling of the node at this loc, or nil"
+  "Return the loc of the right sibling of the tree at this loc, or nil"
   [loc]
   (when-let [[r & rs :as rights] (seq (rights loc))]
-    (assoc loc :node r :lefts (conj (lefts loc) (node loc)) :rights (or rs ()))))
+    (assoc loc :tree r :lefts (conj (lefts loc) (tree loc)) :rights (or rs ()))))
 
 (defn leftmost
-  "Returns the loc of the leftmost sibling of the node at this loc, or self"
+  "Returns the loc of the leftmost sibling of the tree at this loc, or self"
   [loc]
   (if-let [lefts (seq (lefts loc))]
-    (assoc loc :node (first lefts) :lefts [] :rights (concat (rest lefts) [(node loc)] (rights loc)))
+    (assoc loc :tree (first lefts) :lefts [] :rights (concat (rest lefts) [(tree loc)] (rights loc)))
     loc))
 
 (defn rightmost
-  "Returns the loc of the leftmost sibling of the node at this loc, or self"
+  "Returns the loc of the leftmost sibling of the tree at this loc, or self"
   [loc]
   (if-let [rights (seq (rights loc))]
-    (assoc loc :node (last rights) :lefts (apply conj (lefts loc) (node loc) (butlast rights)) :rights [])
+    (assoc loc :tree (last rights) :lefts (apply conj (lefts loc) (tree loc) (butlast rights)) :rights [])
     loc))
 
 (defn insert-left
-  "Insert the item as the left sibling of the node at this loc, without moving"
+  "Insert the item as the left sibling of the tree at this loc, without moving"
   [loc item]
   (if (empty? (path loc))
     (throw (new Exception "Insert at top"))
     (assoc loc :lefts (conj (lefts loc) item) :dirty-generation? true)))
 
 (defn insert-right
-  "Insert the item as the right sibling of the node at this loc, without moving"
+  "Insert the item as the right sibling of the tree at this loc, without moving"
   [loc item]
   (if (empty? (path loc))
     (throw (new Exception "Insert at top"))
     (assoc loc :rights (cons item (rights loc)) :dirty-generation? true)))
 
 (defn edit
-  "Replace the node at this loc with the value of (f node args)"
+  "Replace the tree at this loc with the value of (f tree args)"
   [loc f & args]
-  (replace loc (apply f (node loc) args)))
+  (replace loc (apply f (tree loc) args)))
 
 (defn insert-child
-  "Insert the item as the leftmost child of the node at this loc, without moving"
+  "Insert the item as the leftmost child of the tree at this loc, without moving"
   [loc item]
-  (replace loc (make-node loc (node loc) (cons item (children loc)))))
+  (replace loc (make-tree loc (tree loc) (cons item (children loc)))))
 
 (defn append-child
-  "Inserts the item as the rightmost child of the node at this loc, without moving"
+  "Inserts the item as the rightmost child of the tree at this loc, without moving"
   [loc item]
-  (replace loc (make-node loc (node loc) (concat (children loc) [item]))))
+  (replace loc (make-tree loc (tree loc) (concat (children loc) [item]))))
 
 (defn next
   "Moves to the next loc in the hierarchy, depth-first. When reaching the end, returns
@@ -153,78 +150,78 @@
     (up loc)))
 
 (defn remove
-  "Remove the node at loc, returning the loc that would have preceded it in a depth-first walk."
+  "Remove the tree at loc, returning the loc that would have preceded it in a depth-first walk."
   [loc]
   (let [lefts (lefts loc)]
     (if (empty? (path loc))
       (throw (new Exception "Remove at top"))
       (if (pos? (count lefts))
-        (loop [loc (assoc loc :node (peek lefts) :lefts (pop lefts) :dirty-generation? true)]
+        (loop [loc (assoc loc :tree (peek lefts) :lefts (pop lefts) :dirty-generation? true)]
           (if-let [child (and (branch? loc) (down loc))]
             (recur (rightmost child))
             loc))
-        (replace (parent loc) (make-node loc (node (parent loc)) (rights loc)))))))
+        (replace (parent loc) (make-tree loc (tree (parent loc)) (rights loc)))))))
 
-(defrecord ListZipper [node lefts parent rights dirty-generation?]
+(defrecord ListZipper [tree lefts parent rights dirty-generation?]
   Zipper
-  (branch? [this] (list? node))
-  (children [this] node)
-  (make-node [this node children] (reverse (into (empty node) children)))
-  Loc
-  (node [this] node)
+  (branch? [this] (list? tree))
+  (children [this] tree)
+  (make-tree [this tree children] (reverse (into (empty tree) children)))
+  (tree [this] tree)
+  (dirty-generation? [this] dirty-generation?)
+  Node
   (lefts [this] lefts)
   (rights [this] rights)
-  (parent [this] parent)
-  (dirty-generation? [this] dirty-generation?))
+  (parent [this] parent))
 
 (defn list-zip
   "Return a zipper for nested lists, given a root list"
   [root] (->ListZipper root () nil () false))
 
-(defrecord SeqableZipper [node lefts parent rights dirty-generation?]
+(defrecord SeqableZipper [tree lefts parent rights dirty-generation?]
   Zipper
-  (branch? [this] (seqable? node))
-  (children [this] (seq node))
-  (make-node [this node children] (into (empty node) children))
-  Loc
-  (node [this] node)
+  (branch? [this] (seqable? tree))
+  (children [this] (seq tree))
+  (make-tree [this tree children] (into (empty tree) children))
+  (tree [this] tree)
+  (dirty-generation? [this] dirty-generation?)
+  Node
   (lefts [this] lefts)
   (rights [this] rights)
-  (parent [this] parent)
-  (dirty-generation? [this] dirty-generation?))
+  (parent [this] parent))
 
 (defn seqable-zip
   "Return a zipper for nested seqables, given a root seqable"
   [root] (->SeqableZipper root [] nil [] false))
 
-(defrecord MapZipper [node lefts parent rights dirty-generation?]
+(defrecord MapZipper [tree lefts parent rights dirty-generation?]
   Zipper
-  (branch? [this] ((comp map? val) node))
-  (children [this] (val node))
-  (make-node [this [k children :as node] children'] (clojure.lang.MapEntry. k (into (empty children) children')))
-  Loc
-  (node [this] node)
+  (branch? [this] ((comp map? val) tree))
+  (children [this] (val tree))
+  (make-tree [this [k children :as tree] children'] (clojure.lang.MapEntry. k (into (empty children) children')))
+  (tree [this] tree)
+  (dirty-generation? [this] dirty-generation?)
+  Node
   (lefts [this] lefts)
   (rights [this] rights)
-  (parent [this] parent)
-  (dirty-generation? [this] dirty-generation?))
+  (parent [this] parent))
 
 (defn map-zip
   "Return a zipper for nested maps, given a root map"
   ([root] (map-zip ::map-zip-root root))
   ([root-key root] (->MapZipper (clojure.lang.MapEntry. root-key root) [] nil [] false)))
 
-(defrecord VectorZipper [node lefts parent rights dirty-generation?]
+(defrecord VectorZipper [tree lefts parent rights dirty-generation?]
   Zipper
-  (branch? [this] (vector? node))
-  (children [this] node)
-  (make-node [this children children'] (into (empty children) children'))
-  Loc
-  (node [this] node)
+  (branch? [this] (vector? tree))
+  (children [this] tree)
+  (make-tree [this children children'] (into (empty children) children'))
+  (tree [this] tree)
+  (dirty-generation? [this] dirty-generation?)
+  Node
   (lefts [this] lefts)
   (rights [this] rights)
-  (parent [this] parent)
-  (dirty-generation? [this] dirty-generation?))
+  (parent [this] parent))
 
 (defn vector-zip
   "Return a zipper for nested vectors, given a root vector"
@@ -251,5 +248,5 @@
   "Return the loc of the child named by `k`"
   [loc k]
   (when (branch? loc)
-    (when-let [[lefts node rights] (pivot loc k)]
-      (assoc loc :node node :lefts lefts :parent loc :rights rights :dirty-generation? false))))
+    (when-let [[lefts pivot rights] (pivot loc k)]
+      (assoc loc :tree pivot :lefts lefts :parent loc :rights rights :dirty-generation? false))))
