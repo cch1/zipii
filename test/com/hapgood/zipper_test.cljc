@@ -267,6 +267,9 @@
            (-> nroot vector-zip down right right (edit inc) left root node)))))
 
 (deftest preserve-type-on-edit
+  (let [nroot (sorted-set 1 2 3)]
+    (is (instance? (class nroot)
+                   (-> nroot seqable-zip down right (edit dec) root node))))
   (let [nroot (list 1 2 3)]
     (is (instance? (class nroot)
                    (-> nroot list-zip down right (edit dec) root node))))

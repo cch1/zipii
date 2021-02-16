@@ -181,6 +181,22 @@
   "Return a zipper for nested lists, given a root list"
   [root] (->ListZipper root () nil () false))
 
+(defrecord SeqableZipper [node lefts parent rights dirty-generation?]
+  Zipper
+  (branch? [this] (seqable? node))
+  (children [this] (seq node))
+  (make-node [this node children] (into (empty node) children))
+  Loc
+  (node [this] node)
+  (lefts [this] lefts)
+  (rights [this] rights)
+  (parent [this] parent)
+  (dirty-generation? [this] dirty-generation?))
+
+(defn seqable-zip
+  "Return a zipper for nested seqables, given a root seqable"
+  [root] (->SeqableZipper root [] nil [] false))
+
 (defrecord MapZipper [node lefts parent rights dirty-generation?]
   Zipper
   (branch? [this] ((comp map? val) node))
