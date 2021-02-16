@@ -1,6 +1,5 @@
 (ns com.hapgood.zipper
-  (:refer-clojure :exclude (replace remove next))
-  (:require [clojure.zip :as z]))
+  (:refer-clojure :exclude (replace remove next)))
 
 ;; Reference: https://www.st.cs.uni-saarland.de//edu/seminare/2005/advanced-fp/docs/huet-zipper.pdf
 
@@ -22,7 +21,7 @@
   (rights [this] "Return a seqable of the right siblings of this loc")
   (lefts [this] "Return a seqable of the left siblings of this loc")
   (parent [this] "Return the parent loc of this loc, or nil if this loc is the root")
-  (changed? [this] "Return a boolean predicated on this loc having been modified since being added to its parent"))
+  (dirty-generation? [this] "Return a boolean predicated on a node in this loc's generation having been changed"))
 
 (defn- make-end
   "Create a sentinel loc that can only result from navigating beyond the limits of the data structure"
@@ -33,7 +32,7 @@
                    (rights [_] (throw!))
                    (lefts [_] (throw!))
                    (parent [_] (throw!))
-                   (changed? [_] (throw!)))))
+                   (dirty-generation? [_] (throw!)))))
 
 (def end?
   "Return wormholed loc if loc represents the end of a depth-first walk, otherwise nil"
@@ -42,13 +41,13 @@
 (defn replace
   "Replace the node at this loc, without moving"
   [loc node]
-  (assoc loc :node node :changed? true))
+  (assoc loc :node node :dirty-generation? true))
 
 ;; Hierarchical navigation
 (defn up
   "Returns the loc of the parent of the node at this loc (reflecting any changes), or nil if at the top"
   [loc] (when-let [ploc (parent loc)]
-          (if (changed? loc)
+          (if (dirty-generation? loc)
             (replace ploc (make-node loc (node ploc) (concat (lefts loc) (cons (node loc) (rights loc)))))
             ploc)))
 
@@ -58,7 +57,7 @@
   (when (branch? loc)
     (let [[child & children] (children loc)]
       (when child
-        (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :changed? false)))))
+        (assoc loc :node child :lefts [] :parent loc :rights (or children ()) :dirty-generation? false)))))
 
 (defn root
   "Zip all the way up and return the root node, reflecting any changes."
@@ -78,13 +77,13 @@
   [loc]
   (let [lefts (lefts loc)]
     (when (seq lefts)
-      (assoc loc :node (peek lefts) :lefts (pop lefts) :rights (cons (node loc) (rights loc)) :changed? false))))
+      (assoc loc :node (peek lefts) :lefts (pop lefts) :rights (cons (node loc) (rights loc))))))
 
 (defn right
   "Return the loc of the right sibling of the node at this loc, or nil"
   [loc]
   (when-let [[r & rs :as rights] (seq (rights loc))]
-    (assoc loc :node r :lefts (conj (lefts loc) (node loc)) :rights (or rs ()) :changed? false)))
+    (assoc loc :node r :lefts (conj (lefts loc) (node loc)) :rights (or rs ()))))
 
 (defn leftmost
   "Returns the loc of the leftmost sibling of the node at this loc, or self"
@@ -105,14 +104,14 @@
   [loc item]
   (if (empty? (path loc))
     (throw (new Exception "Insert at top"))
-    (assoc loc :lefts (conj (lefts loc) item) :changed? true)))
+    (assoc loc :lefts (conj (lefts loc) item) :dirty-generation? true)))
 
 (defn insert-right
   "Insert the item as the right sibling of the node at this loc, without moving"
   [loc item]
   (if (empty? (path loc))
     (throw (new Exception "Insert at top"))
-    (assoc loc :rights (cons item (rights loc)) :changed? true)))
+    (assoc loc :rights (cons item (rights loc)) :dirty-generation? true)))
 
 (defn edit
   "Replace the node at this loc with the value of (f node args)"
@@ -160,13 +159,13 @@
     (if (empty? (path loc))
       (throw (new Exception "Remove at top"))
       (if (pos? (count lefts))
-        (loop [loc (assoc loc :node (peek lefts) :lefts (pop lefts) :changed? true)]
+        (loop [loc (assoc loc :node (peek lefts) :lefts (pop lefts) :dirty-generation? true)]
           (if-let [child (and (branch? loc) (down loc))]
             (recur (rightmost child))
             loc))
         (replace (parent loc) (make-node loc (node (parent loc)) (rights loc)))))))
 
-(defrecord SeqZipper [node lefts parent rights changed?]
+(defrecord SeqZipper [node lefts parent rights dirty-generation?]
   Zipper
   (branch? [this] (seq? node))
   (children [this] node)
@@ -176,13 +175,13 @@
   (lefts [this] lefts)
   (rights [this] rights)
   (parent [this] parent)
-  (changed? [this] changed?))
+  (dirty-generation? [this] dirty-generation?))
 
 (defn seq-zip
   "Return a zipper for nested maps, given a root map"
   [root] (->SeqZipper root [] nil [] false))
 
-(defrecord MapZipper [node lefts parent rights changed?]
+(defrecord MapZipper [node lefts parent rights dirty-generation?]
   Zipper
   (branch? [this] ((comp map? val) node))
   (children [this] (val node))
@@ -192,14 +191,14 @@
   (lefts [this] lefts)
   (rights [this] rights)
   (parent [this] parent)
-  (changed? [this] changed?))
+  (dirty-generation? [this] dirty-generation?))
 
 (defn map-zip
   "Return a zipper for nested maps, given a root map"
   ([root] (map-zip ::map-zip-root root))
   ([root-key root] (->MapZipper (clojure.lang.MapEntry. root-key root) [] nil [] false)))
 
-(defrecord VecZipper [node lefts parent rights changed?]
+(defrecord VecZipper [node lefts parent rights dirty-generation?]
   Zipper
   (branch? [this] (vector? node))
   (children [this] node)
@@ -209,7 +208,7 @@
   (lefts [this] lefts)
   (rights [this] rights)
   (parent [this] parent)
-  (changed? [this] changed?))
+  (dirty-generation? [this] dirty-generation?))
 
 (defn vec-zip
   "Return a zipper for nested vectors, given a root vector"
@@ -237,4 +236,4 @@
   [loc k]
   (when (branch? loc)
     (when-let [[lefts node rights] (pivot loc k)]
-      (assoc loc :node node :lefts lefts :parent loc :rights rights :changed? false))))
+      (assoc loc :node node :lefts lefts :parent loc :rights rights :dirty-generation? false))))

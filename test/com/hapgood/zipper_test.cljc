@@ -255,3 +255,13 @@
     (is (= child (-> z (down-to 0) node)))
     (is (= 130 (-> z (down-to 0) (down-to 3) (down-to 0) node)))
     (is (nil? (-> z (down-to 9))))))
+
+;; Edge case exploration
+(deftest move-and-edit
+  (let [nroot [1 1 3 [4 5]]]
+    (is (= (-> nroot vec-zip down right (edit inc) root node)
+           (-> nroot vec-zip down right (edit inc) right root node)))
+    (is (= (-> nroot vec-zip down right right (edit inc) root node)
+           (-> nroot vec-zip down right right (edit inc) left root node)))
+    (is (= (-> nroot vec-zip down rightmost left (edit inc) root node)
+           (-> nroot vec-zip down right right (edit inc) left root node)))))
