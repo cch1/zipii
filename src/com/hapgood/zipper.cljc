@@ -165,9 +165,9 @@
             loc))
         (replace (parent loc) (make-node loc (node (parent loc)) (rights loc)))))))
 
-(defrecord SeqZipper [node lefts parent rights dirty-generation?]
+(defrecord ListZipper [node lefts parent rights dirty-generation?]
   Zipper
-  (branch? [this] (seq? node))
+  (branch? [this] (list? node))
   (children [this] node)
   (make-node [this node children] (reverse (into (empty node) children)))
   Loc
@@ -177,9 +177,9 @@
   (parent [this] parent)
   (dirty-generation? [this] dirty-generation?))
 
-(defn seq-zip
-  "Return a zipper for nested maps, given a root map"
-  [root] (->SeqZipper root [] nil [] false))
+(defn list-zip
+  "Return a zipper for nested lists, given a root list"
+  [root] (->ListZipper root () nil () false))
 
 (defrecord MapZipper [node lefts parent rights dirty-generation?]
   Zipper
@@ -198,7 +198,7 @@
   ([root] (map-zip ::map-zip-root root))
   ([root-key root] (->MapZipper (clojure.lang.MapEntry. root-key root) [] nil [] false)))
 
-(defrecord VecZipper [node lefts parent rights dirty-generation?]
+(defrecord VectorZipper [node lefts parent rights dirty-generation?]
   Zipper
   (branch? [this] (vector? node))
   (children [this] node)
@@ -210,9 +210,9 @@
   (parent [this] parent)
   (dirty-generation? [this] dirty-generation?))
 
-(defn vec-zip
+(defn vector-zip
   "Return a zipper for nested vectors, given a root vector"
-  [root] (->VecZipper root []  nil [] false))
+  [root] (->VectorZipper root []  nil [] false))
 
 (defprotocol ChildrenByName
   (pivot [loc cname] "Return a triple of [children-before pivot-child children-after"))
@@ -225,7 +225,7 @@
         (let [v (vec children)
               i (.indexOf (keys children) k)]
           [(into {} (subvec v 0 i)) pivot (into {} (subvec v (inc i)))]))))
-  VecZipper
+  VectorZipper
   (pivot [this k]
     (let [children (children this)]
       (when-let [[k v] (find children k)]

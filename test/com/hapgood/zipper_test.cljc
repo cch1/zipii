@@ -5,19 +5,19 @@
   (:refer-clojure :exclude (replace remove next)))
 
 ;; SeqZipper
-(deftest seq-zip-Zipper
+(deftest list-zip-Zipper
   (let [nroot '(0 1 2 (20 21) 3 (30 31 (310)))]
-    (is (= nroot (node (seq-zip nroot))))
-    (is (branch? (seq-zip nroot)))
-    (is (= nroot (children (seq-zip nroot))))
-    (is (= nroot (make-node (seq-zip nroot) () nroot)))
-    (is (nil? (parent (seq-zip nroot))))))
+    (is (= nroot (node (list-zip nroot))))
+    (is (branch? (list-zip nroot)))
+    (is (= nroot (children (list-zip nroot))))
+    (is (= nroot (make-node (list-zip nroot) () nroot)))
+    (is (nil? (parent (list-zip nroot))))))
 
-(deftest seq-zip-hierarchical-navigation
+(deftest list-zip-hierarchical-navigation
   (let [grandchild '((1111) 222)
         child (list grandchild 22)
         nroot (list child 2)
-        z (seq-zip nroot)]
+        z (list-zip nroot)]
     (is (= child (-> z down down parent node)))
     (is (empty? (path z)))
     (is (= child (-> z down node)))
@@ -28,9 +28,9 @@
     (is (nil? (-> z up)))
     (is (nil? (-> z down down down down down)))))
 
-(deftest seq-zip-ordered-navigation
+(deftest list-zip-ordered-navigation
   (let [nroot (list 1 2 3 4)
-        z (seq-zip nroot)]
+        z (list-zip nroot)]
     (is (nil? (-> z right)))
     (is (nil? (-> z left)))
     (is (= 2 (-> z down right node)))
@@ -45,9 +45,9 @@
            (-> z down leftmost)
            (-> z down leftmost leftmost)))))
 
-(deftest seq-zip-update
+(deftest list-zip-update
   (let [nroot '(1 2 (31 32) 4)
-        z (seq-zip nroot)]
+        z (list-zip nroot)]
     (is (= '(1 2 (30 31 32) 4) (-> z down right right down (insert-left 30) root node)))
     (is (= '(1 2 (31 32 33) 4) (-> z down right right down right (insert-right 33) root node)))
     (is (thrown? Exception (-> z (insert-right 33))))
@@ -55,13 +55,13 @@
     (is (= '(1 2 3 4) (-> z down right right (replace 3) root node)))
     (is (= '(0 2 (31 32) 4) (-> z down (edit dec) root node)))
     (is (= '(0 1 2 (31 32) 4) (-> z (insert-child 0) root node)))
-    (is (= '(1) (-> (seq-zip '()) (insert-child 1) node)))
+    (is (= '(1) (-> (list-zip '()) (insert-child 1) node)))
     (is (= '(1 2 (31 32) 4 5) (-> z (append-child 5) root node)))
-    (is (= '(1) (-> (seq-zip '()) (append-child 1) node)))))
+    (is (= '(1) (-> (list-zip '()) (append-child 1) node)))))
 
-(deftest seq-zip-iterate
+(deftest list-zip-iterate
   (let [nroot '(1 2 (31 32) 4)
-        z (seq-zip nroot)
+        z (list-zip nroot)
         step (iterate next z)]
     (is (not (end? z)))
     (is (nil? (prev z)))
@@ -72,15 +72,15 @@
     (is (-> z next next next next next next next end?))
     (is (end? (nth step 100)))))
 
-(deftest seq-zip-remove
+(deftest list-zip-remove
   (let [nroot '(1 2 (31 32) 4)
-        z (seq-zip nroot)]
+        z (list-zip nroot)]
     (is (= '(1 2 4) (-> z down right right remove root node)))
     (is (thrown? Exception (-> z remove)))
     (is (= '(1 2 () 4) (-> z down right right down right remove remove root node)))
     (is (= `(1 2 4) (-> z down right right down right remove remove remove root node)))
     ;; This next one exposes a bug in clojure.zip...
-    (is (= () (-> (seq-zip '(0)) down remove node)))))
+    (is (= () (-> (list-zip '(0)) down remove node)))))
 
 ;; MapZipper
 (deftest map-zip-Zipper
@@ -161,19 +161,19 @@
     (is (= [::root {}] (-> (map-zip ::root {:a 1}) down remove node)))))
 
 ;; VecZipper
-(deftest vec-zip-Zipper
+(deftest vector-zip-Zipper
   (let [nroot [0 1 2 [20 21] 3 [30 31 [310]]]]
-    (is (= nroot (node (vec-zip nroot))))
-    (is (branch? (vec-zip nroot)))
-    (is (= nroot (children (vec-zip nroot))))
-    (is (= nroot (make-node (vec-zip nroot) [] nroot)))
-    (is (nil? (parent (vec-zip nroot))))))
+    (is (= nroot (node (vector-zip nroot))))
+    (is (branch? (vector-zip nroot)))
+    (is (= nroot (children (vector-zip nroot))))
+    (is (= nroot (make-node (vector-zip nroot) [] nroot)))
+    (is (nil? (parent (vector-zip nroot))))))
 
-(deftest vec-zip-hierarchical-navigation
+(deftest vector-zip-hierarchical-navigation
   (let [grandchild [[1111] 222]
         child [grandchild 22]
         nroot [child 2]
-        z (vec-zip nroot)]
+        z (vector-zip nroot)]
     (is (= child (-> z down down parent node)))
     (is (empty? (path z)))
     (is (= child (-> z down node)))
@@ -184,9 +184,9 @@
     (is (nil? (-> z up)))
     (is (nil? (-> z down down down down down)))))
 
-(deftest vec-zip-ordered-navigation
+(deftest vector-zip-ordered-navigation
   (let [nroot [1 2 3 4]
-        z (vec-zip nroot)]
+        z (vector-zip nroot)]
     (is (nil? (-> z right)))
     (is (nil? (-> z left)))
     (is (= 2 (-> z down right node)))
@@ -201,9 +201,9 @@
            (-> z down leftmost)
            (-> z down leftmost leftmost)))))
 
-(deftest vec-zip-update
+(deftest vector-zip-update
   (let [nroot [1 2 [31 32] 4]
-        z (vec-zip nroot)]
+        z (vector-zip nroot)]
     (is (= [1 2 [30 31 32] 4] (-> z down right right down (insert-left 30) root node)))
     (is (= [1 2 [31 32 33] 4] (-> z down right right down right (insert-right 33) root node)))
     (is (thrown? Exception (-> z (insert-right 33))))
@@ -211,13 +211,13 @@
     (is (= [1 2 3 4] (-> z down right right (replace 3) root node)))
     (is (= [0 2 [31 32] 4] (-> z down (edit dec) root node)))
     (is (= [0 1 2 [31 32] 4] (-> z (insert-child 0) root node)))
-    (is (= [1] (-> (seq-zip '()) (insert-child 1) node)))
+    (is (= [1] (-> (list-zip '()) (insert-child 1) node)))
     (is (= [1 2 [31 32] 4 5] (-> z (append-child 5) root node)))
-    (is (= [1] (-> (seq-zip []) (append-child 1) node)))))
+    (is (= [1] (-> (list-zip []) (append-child 1) node)))))
 
-(deftest vec-zip-iterate
+(deftest vector-zip-iterate
   (let [nroot [1 2 [31 32] 4]
-        z (vec-zip nroot)
+        z (vector-zip nroot)
         step (iterate next z)]
     (is (not (end? z)))
     (is (nil? (prev z)))
@@ -228,14 +228,14 @@
     (is (-> z next next next next next next next end?))
     (is (end? (nth step 100)))))
 
-(deftest vec-zip-remove
+(deftest vector-zip-remove
   (let [nroot [1 2 [31 32] 4]
-        z (vec-zip nroot)]
+        z (vector-zip nroot)]
     (is (= [1 2 4] (-> z down right right remove root node)))
     (is (thrown? Exception (-> z remove)))
     (is (= [1 2 [] 4] (-> z down right right down right remove remove root node)))
     (is (= [1 2 4] (-> z down right right down right remove remove remove root node)))
-    (is (= [] (-> (vec-zip [0]) down remove node)))))
+    (is (= [] (-> (vector-zip [0]) down remove node)))))
 
 ;; index/key navigation
 (deftest map-zip-key-navigation
@@ -247,11 +247,11 @@
     (is (= [:a00 130] (-> z (down-to :a) (down-to :a3) (down-to :a00) node)))
     (is (nil? (-> z (down-to :c))))))
 
-(deftest vec-zip-index-navigation
+(deftest vector-zip-index-navigation
   (let [grandchild [130 131]
         child [10 11 12 grandchild 14]
         nroot [child 2]
-        z (vec-zip nroot)]
+        z (vector-zip nroot)]
     (is (= child (-> z (down-to 0) node)))
     (is (= 130 (-> z (down-to 0) (down-to 3) (down-to 0) node)))
     (is (nil? (-> z (down-to 9))))))
@@ -259,17 +259,20 @@
 ;; Edge case exploration
 (deftest move-and-edit
   (let [nroot [1 1 3 [4 5]]]
-    (is (= (-> nroot vec-zip down right (edit inc) root node)
-           (-> nroot vec-zip down right (edit inc) right root node)))
-    (is (= (-> nroot vec-zip down right right (edit inc) root node)
-           (-> nroot vec-zip down right right (edit inc) left root node)))
-    (is (= (-> nroot vec-zip down rightmost left (edit inc) root node)
-           (-> nroot vec-zip down right right (edit inc) left root node)))))
+    (is (= (-> nroot vector-zip down right (edit inc) root node)
+           (-> nroot vector-zip down right (edit inc) right root node)))
+    (is (= (-> nroot vector-zip down right right (edit inc) root node)
+           (-> nroot vector-zip down right right (edit inc) left root node)))
+    (is (= (-> nroot vector-zip down rightmost left (edit inc) root node)
+           (-> nroot vector-zip down right right (edit inc) left root node)))))
 
 (deftest preserve-type-on-edit
+  (let [nroot (list 1 2 3)]
+    (is (instance? (class nroot)
+                   (-> nroot list-zip down right (edit dec) root node))))
   (let [nroot (sorted-map :a 1 :b 2 :c 3)]
     (is (instance? (class nroot)
                    (-> nroot map-zip down right (edit #(update % 1 dec)) root node val))))
   (let [nroot (vector-of :long 1 2 3)]
     (is (instance? (class nroot)
-                   (-> nroot vec-zip down right (edit inc) root node)))))
+                   (-> nroot vector-zip down right (edit inc) root node)))))
