@@ -265,3 +265,11 @@
            (-> nroot vec-zip down right right (edit inc) left root node)))
     (is (= (-> nroot vec-zip down rightmost left (edit inc) root node)
            (-> nroot vec-zip down right right (edit inc) left root node)))))
+
+(deftest preserve-type-on-edit
+  (let [nroot (sorted-map :a 1 :b 2 :c 3)]
+    (is (instance? (class nroot)
+                   (-> nroot map-zip down right (edit #(update % 1 dec)) root node val))))
+  (let [nroot (vector-of :long 1 2 3)]
+    (is (instance? (class nroot)
+                   (-> nroot vec-zip down right (edit inc) root node)))))

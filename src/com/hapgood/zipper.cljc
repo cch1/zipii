@@ -169,7 +169,7 @@
   Zipper
   (branch? [this] (seq? node))
   (children [this] node)
-  (make-node [this node children] (with-meta children (meta node)))
+  (make-node [this node children] (reverse (into (empty node) children)))
   Loc
   (node [this] node)
   (lefts [this] lefts)
@@ -185,7 +185,7 @@
   Zipper
   (branch? [this] ((comp map? val) node))
   (children [this] (val node))
-  (make-node [this [k children :as node] children'] (clojure.lang.MapEntry. k (into {} children')))
+  (make-node [this [k children :as node] children'] (clojure.lang.MapEntry. k (into (empty children) children')))
   Loc
   (node [this] node)
   (lefts [this] lefts)
@@ -202,7 +202,7 @@
   Zipper
   (branch? [this] (vector? node))
   (children [this] node)
-  (make-node [this children children'] (vec children'))
+  (make-node [this children children'] (into (empty children) children'))
   Loc
   (node [this] node)
   (lefts [this] lefts)
