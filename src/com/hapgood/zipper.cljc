@@ -37,7 +37,7 @@
   (change [loc t] "Replace the tree at this loc with t, without moving.")
   (insert-left [loc t] "Insert t as the left sibling of the tree at this loc, without moving.")
   (insert-right [loc t] "Insert t as the right sibling of the tree at this loc, without moving.")
-  (insert-down [loc t] "Insert t as the leftmost child of the tree (which must be a branch) at this loc, without moving.")
+  (insert-down [loc t] "Insert t as the leftmost child of the tree (which must be a branch) at this loc, moving to the newly inserted t.")
   (delete [loc] "Delete the tree at loc, returning the loc that would have preceded it in a depth-first walk."))
 
 (def top
@@ -138,6 +138,11 @@
     (if-let [r (left loc)]
       (recur r)
       loc)))
+
+(defn- iteratively [n f]
+  "Return a function that composes n applications of f"
+  (fn [x] (loop [i n x x]
+            (if (zero? i) x (recur (dec i) (f x))))))
 
 (defn next
   "Moves to the next loc in the hierarchy, depth-first. When reaching the end, returns
@@ -256,8 +261,35 @@
                               ptrees (conj (.-ptrees this) (.-tree this))]
                           (->Loc pivot [lefts path rights] ptrees (.-branch? this) (.-children this) (.-section this)))))))
 
-;; RH Nomenclature & compatibility shims
-(def replace change)
-(def remove delete)
-(def insert-child  (comp up insert-down))
-(def append-child (comp up append-down))
+;; RH compatibility shims
+(defn- slew
+  "Slew the first loc to the DFS position of the second, presuming loc1's DFS predecessors have not been changed in loc0's tree"
+  ;; When loc0 and loc1 have the same parent and common elder siblings they are, by this definition, in the same position.
+  ;; NB: this condition will not hold if either loc has zip-propogated independent changes up to a shared ancestor.
+  ;; The intent of this operation is to "pull" loc0 to a DFS predecessor in its tree, dragging along any zipped changes loc0 may embody.
+  ;; To prevent indenpdent changes from being zipped into a parent (and changing their identity), the strategy is to move both locs up
+  ;; until they have identical parents and then move loc0 back through the recorded path of show loc1 arrived at the common ancestor.
+  [loc0 loc1]
+  (loop [loc0 loc0 loc1 loc1 s identity]
+    (let [[lefts0 parent0 _]  (:path loc0)
+          [lefts1 parent1 _]  (:path loc1)
+          ls1 (count lefts1)]
+      (if (= parent0 parent1)
+        (if (= lefts0 lefts1)
+          (s loc0)  ; replay on loc0 how loc1 got here
+          (recur (leftmost loc0) (leftmost loc1) (comp s (iteratively ls1 right))))
+        (let [ds0 (count (:ptrees loc0))
+              ds1 (count (:ptrees loc1))
+              delta-d (- ds1 ds0)]
+          (cond
+            (pos? delta-d) (recur loc0 (up loc1) (comp s (iteratively ls1 right) down))
+            (neg? delta-d) (recur (up loc0) loc1 s)
+            true (recur (up loc0) (up loc1) (comp s (iteratively ls1 right) down))))))))
+
+(def replace "Replaces the node at this loc, without moving" change)
+(defn remove
+  "Remove the node at loc, returning the loc that would have preceded it in a depth-first walk."
+  [loc]
+  (slew (delete loc) (prev loc)))
+(def insert-child "Insert the item as the leftmost child of the node at this loc, without moving" (comp up insert-down))
+(def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))

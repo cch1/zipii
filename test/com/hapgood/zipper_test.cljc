@@ -411,3 +411,32 @@
   (let [t (vector-of :long 1 2 3)]
     (is (instance? (class t)
                    (-> t vector-zip down right (edit inc) root tree)))))
+
+;; RH compatibility shims
+(deftest replace-shim
+  (let [t [1 2 3 [4 5]]
+        z (vector-zip t)]
+    (let [z (-> z down right right right down (replace 9/2))]
+      (is (= 9/2 (-> z tree)))
+      (is (= [1 2 3 [9/2 5]] (-> z root tree))))))
+
+(deftest remove-shim
+  (let [t [1 2 3 [4 5]]
+        z (vector-zip t)]
+    (let [z (-> z down right right right down remove)]
+      (is (= [5] (-> z tree)))
+      (is (= [1 2 3 [5]] (-> z root tree))))))
+
+(deftest insert-child-shim
+  (let [t [1 2 3 [4 5]]
+        z (vector-zip t)]
+    (let [z (-> z down right right right (insert-child 7/2))]
+      (is (= [7/2 4 5] (-> z tree)))
+      (is (= [1 2 3 [7/2 4 5]] (-> z root tree))))))
+
+(deftest append-child-shim
+  (let [t [1 2 3 [4 5]]
+        z (vector-zip t)]
+    (let [z (-> z down right right right (append-child 6))]
+      (is (= [4 5 6] (-> z tree)))
+      (is (= [1 2 3 [4 5 6]] (-> z root tree))))))
