@@ -7,23 +7,15 @@
 ;; 1. The use of metadata "seems" less idiomatic than a protocol & defrecord.  Performance may or may not suffer (TBD) but the syntax with protocols more closely matches the intent of the code, in my opinion.
 ;; 2. Sentinel values like `:end` and `nil` "seem" less idiomatic than namespaced keywords and sentinel objects.
 ;; 4. There is a bug in the original implementation when deleting the last child of a node in a seq-zip.
-;; 5. The functionality provided by the `pnodes` attribute serves only as a template when resetting the children of a node. -which is really only an issue
-;; 6. The `root` function complects `move` and `return-updated-data-structure`.  In fact, there is no (simple) way to move to the root without also exiting the zipper.  This is surprising and it's not too hard to string together `root` followed by `item` to accomplish the combined effect.
-;; 7. The `changed?` attribute increases performance relative to the base Huet implementation (in which the tree is reconstituted when zipping up regardless of changes) when movement is more vertical, but at the expense of complexity.  I will explore scars for this purpose at some later time.
-;; 8. The vocabulary diverges from Huet and while Hickey's seems more reasonable, the Huet paper is an excellent implementation guide and sticking to his vocabulary reinforces that effect.
-;; 9. Exceptions are not very precise nor are they data-laden.
+;; 5. The `root` function complects `move` and `return-updated-data-structure`.  In fact, there is no (simple) way to move to the root without also exiting the zipper.  This is surprising and it's not too hard to string together `root` followed by `item` to accomplish the combined effect.
+;; 6. The `changed?` attribute increases performance relative to the base Huet implementation (in which the tree is reconstituted when zipping up regardless of changes) when movement is more vertical, but at the expense of complexity.  I will explore scars for this purpose at some later time.
+;; 7. The vocabulary diverges from Huet and while Hickey's seems more reasonable, the Huet paper is an excellent implementation guide and sticking to his vocabulary reinforces that effect.
+;; 8. Exceptions are not very precise nor are they data-laden.
 
 ;; Issues with the OCaml psuedo-implementation by Huet:
 ;; 1. Insertion is inconsistent with respect to the resulting position: at inserted element for some (`insert-down`) but in the original position (`insert-left`, `insert-right`) for others.  Did Hickey choose a different name (`insert-child`, with no movement, for `insert-down`) to be consistent without clashing with the original implementation?
 ;; 2. The implementation does not provide much detail on error conditions/failures and their translation in Clojure.
 ;; 3. Without the complexity of scars, performance is likely to suffer when movement is more vertical.
-
-#_ (defprotocol Zipper
-     (branch? [this] "Return true if the tree of this loc is a branch")
-     (children [this] "Return a seqable of the children of the tree of this loc, which must be a branch")
-     (make-tree [this tree children] "Return a new subtree, given an existing subtree and new children")
-     (tree [this] "Return the tree of this loc")
-     (dirty-generation? [this] "Return a boolean predicated on a tree in this loc's generation having been changed"))
 
 ;; Original Huet implementation
 (defprotocol Zipper
