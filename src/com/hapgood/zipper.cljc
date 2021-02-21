@@ -33,7 +33,7 @@
   (delete [loc] "Delete the tree at loc, returning the loc that would have preceded it in a depth-first walk."))
 
 (def top
-  "A sentinel value representing the path to the element at the top of a zipper"
+  "A sentinel value representing the path of the tree at the top of a zipper"
   [() nil ()])
 
 (defrecord Loc [tree path ptrees branch? children section]
