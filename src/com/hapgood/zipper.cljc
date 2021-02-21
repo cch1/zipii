@@ -79,6 +79,11 @@
                        true (->Loc (section (peek ptrees) ()) parent (pop ptrees) branch? children section)))
                    (throw (ex-info "Can't remove at top" {:loc this :tree tree})))))
 
+(defn nth-child [loc n] (cond
+                          (zero? n) (throw (ex-info "Children are identified by positive integers allowed" {:loc loc :n n}))
+                          (= 1 n) (down loc)
+                          true (right (nth-child loc (dec n)))))
+
 ;; RH/clojure.zip compatibility: shims and extensions
 
 ;; Iterative navigation

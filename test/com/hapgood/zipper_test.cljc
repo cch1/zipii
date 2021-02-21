@@ -149,6 +149,9 @@
                    item (-> z tree)]
                (-> z delete (insert-child item) root tree))))))
 
+(deftest nth-child-porcelain
+  (is (= 4 (-> (range) seq-zip (nth-child 5) tree))))
+
 ;; Tests for specific zipper variants
 
 (deftest list-zip-hierarchical-navigation
