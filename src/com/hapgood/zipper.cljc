@@ -79,6 +79,8 @@
                        true (->Loc (section (peek ptrees) ()) parent (pop ptrees) branch? children section)))
                    (throw (ex-info "Can't remove at top" {:loc this :tree tree})))))
 
+;; RH/clojure.zip compatibility: shims and extensions
+
 ;; Iterative navigation
 (defn- make-end
   "Create a sentinel loc that can only result from navigating beyond the limits of the data structure"
@@ -130,11 +132,6 @@
     (if-let [r (left loc)]
       (recur r)
       loc)))
-
-(defn- iteratively [n f]
-  "Return a function that composes n applications of f"
-  (fn [x] (loop [i n x x]
-            (if (zero? i) x (recur (dec i) (f x))))))
 
 (defn next
   "Moves to the next loc in the hierarchy, depth-first. When reaching the end, returns
@@ -188,7 +185,7 @@
   [branch? children section root]
   (->Loc root top [] branch? children section))
 
-(defn fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
+(defn- fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
 
 (def seqable-zip ; generic; mutation will return a tree of lists since we don't now how to fill a template
   "Return a zipper for nested seqables, given a root seqable"
@@ -227,33 +224,11 @@
   (let [section (fn [tree children'] (assoc tree :content (and children' (apply vector children'))))]
     (partial zipper (complement string?) (comp seq :content) section)))
 
-(defprotocol Pivotable
-  (pivot [this k] "Pivot the elements of this collection and return a triple of [elements-before element-at elements-after"))
+(defn- iteratively [n f]
+  "Return a function that composes n applications of f"
+  (fn [x] (loop [i n x x]
+            (if (zero? i) x (recur (dec i) (f x))))))
 
-(extend-protocol Pivotable
-  clojure.lang.MapEquivalence
-  (pivot [this k] (when-let [me (find this k)]
-                    (let [mes (vec this)
-                          i (.indexOf (vec this) me)
-                          [befores pivot-and-afters] (split-at i mes)]
-                      [(into (empty this) befores) me (into (empty this) (rest pivot-and-afters))])))
-  clojure.lang.IPersistentVector
-  (pivot [this k]
-    (when-let [v (get this k)]
-      [(subvec this 0 k) v (subvec this (inc k))])))
-
-(defprotocol ChildrenByName
-  (down-to [loc cname] "Return a triple of [children-before pivot-child children-after"))
-
-(extend-protocol ChildrenByName
-  Loc
-  (down-to [this k] (when (.branch? this)
-                      (when-let [[lefts pivot rights] (pivot (children this) k)]
-                        (let [path (.-path this)
-                              ptrees (conj (.-ptrees this) (.-tree this))]
-                          (->Loc pivot [lefts path rights] ptrees (.-branch? this) (.-children this) (.-section this)))))))
-
-;; RH compatibility shims
 (defn- slew
   "Slew the first loc to the DFS position of the second, presuming loc1's DFS predecessors have not been changed in loc0's tree"
   ;; When loc0 and loc1 have the same parent and common elder siblings they are, by this definition, in the same position.
@@ -285,3 +260,29 @@
   (slew (delete loc) (prev loc)))
 (def insert-child "Insert the item as the leftmost child of the node at this loc, without moving" (comp up insert-down))
 (def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))
+
+(defprotocol Pivotable
+  (pivot [this k] "Pivot the elements of this collection and return a triple of [elements-before element-at elements-after"))
+
+(extend-protocol Pivotable
+  clojure.lang.MapEquivalence
+  (pivot [this k] (when-let [me (find this k)]
+                    (let [mes (vec this)
+                          i (.indexOf (vec this) me)
+                          [befores pivot-and-afters] (split-at i mes)]
+                      [(into (empty this) befores) me (into (empty this) (rest pivot-and-afters))])))
+  clojure.lang.IPersistentVector
+  (pivot [this k]
+    (when-let [v (get this k)]
+      [(subvec this 0 k) v (subvec this (inc k))])))
+
+(defprotocol ChildrenByName
+  (down-to [loc cname] "Return a triple of [children-before pivot-child children-after"))
+
+(extend-protocol ChildrenByName
+  Loc
+  (down-to [this k] (when (.branch? this)
+                      (when-let [[lefts pivot rights] (pivot (children this) k)]
+                        (let [path (.-path this)
+                              ptrees (conj (.-ptrees this) (.-tree this))]
+                          (->Loc pivot [lefts path rights] ptrees (.-branch? this) (.-children this) (.-section this)))))))
