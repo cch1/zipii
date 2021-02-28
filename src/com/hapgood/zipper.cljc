@@ -35,53 +35,82 @@
   (branches [this] "Return a seq of the child branches of this tree-like, or nil if it is not a branch")
   (seed [this branches] "Return a new tree-like with the same treeish genesis but with the supplied branches"))
 
+(extend-protocol TreeLike
+  nil
+  (tree [this] this)
+  (branch? [_] false)
+  (branches [this] nil)
+  (seed [this _] (throw (ex-info "Leaf objects cannot seed a new tree" {:obj this})))
+  Object
+  (tree [this] this)
+  (branch? [_] false)
+  (branches [this] nil)
+  (seed [this _] (throw (ex-info "Leaf objects cannot seed a new tree" {:obj this}))))
+
+(deftype Section [trees treeish branch? branches seed]
+  clojure.lang.Indexed
+  (nth [this n] (nth trees n))
+  TreeLike
+  (tree [this] (seed treeish (map tree trees)))
+  (branch? [_] true)
+  (branches [_] trees)
+  (seed [_ bs] (let [t (seed treeish (map tree bs))] (Section. (branches t) t branch? branches seed)))
+  Object
+  (equals [this other] (and (= (type this) (type other))
+                            (= [trees treeish branch? branches seed]
+                               [(.-trees other) (.-treeish other) (.-branch? other) (.-branches other) (.-seed other)])))
+  (hashCode [this] (.hashCode [trees treeish branch? branches seed])))
+
+(defmethod print-method Section [s w] (.write w "<") (.write w (str (branches s))) (.write w ">"))
+
 (def top
   "A sentinel value representing the path of the tree at the top of a zipper"
   [() nil ()])
 
-(defrecord Loc [tree path ptrees branch? children section]
+(defrecord Loc [t p pts ->treeish]
   TreeLike
-  (tree [this] tree)
-  (branches [this] (when (branch? tree) (children tree)))
-  (branch? [this] (branch? tree))
+  (tree [this] (tree t))
+  (branch? [this] (branch? t))
+  (branches [this] (branches t))
   Zipper
   (left [this] (when (not= top p)
                  (let [[[l & ls :as lefts] parent rights] p
                        node [(or ls ()) parent (cons t rights)]]
-                   (when l (->Loc l node pts branch? children section)))))
+                   (when l (->Loc (->treeish l) node pts ->treeish)))))
   (right [this] (when (not= top p)
                   (let [[lefts parent [r & rs :as rights]] p
                         node [(cons t lefts) parent (or rs ())]]
-                    (when r (->Loc r node pts branch? children section)))))
+                    (when r (->Loc (->treeish r) node pts ->treeish)))))
   (up [this] (when (not= top p)
                (let [[lefts parent rights] p
-                     t (section (peek pts) (concat (reverse lefts) (cons t rights)))]
-                 (->Loc t parent (pop pts) branch? children section))))
+                     t (seed (peek pts) (concat (reverse lefts) (cons t rights)))]
+                 (->Loc t parent (pop pts) ->treeish))))
   (down [this] (when (branch? t)
-                 (when-let [[t1 & trees] (seq (children t))]
-                   (->Loc t1 [() p (or trees ())] (conj pts t) branch? children section))))
-  (change [this t'] (->Loc t' p pts branch? children section))
+                 (when-let [[t1 & trees] (seq (branches t))]
+                   (->Loc (->treeish t1) [() p (or trees ())] (conj pts t) ->treeish))))
+  (change [this t'] (->Loc (->treeish t') p pts ->treeish))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts parent rights] p
-                                node [(cons l lefts) parent rights]]
-                            (->Loc t node pts branch? children section))
+                                node [(cons (->treeish l) lefts) parent rights]]
+                            (->Loc t node pts ->treeish))
                           (throw (ex-info "Can't insert left of top" {:loc this :t t}))))
   (insert-right [this r] (if (not= top p)
                            (let [[lefts parent rights] p
-                                 node [lefts parent (cons r rights)]]
-                             (->Loc t node pts branch? children section))
+                                 node [lefts parent (cons (->treeish r) rights)]]
+                             (->Loc t node pts ->treeish))
                            (throw (ex-info "Can't insert right of top" {:loc this :t t}))))
   (insert-down [this t1] (if (branch? t)
-                           (let [node [() p (children t)]]
-                             (->Loc t1 node (conj pts t) branch? children section))
+                           (let [node [() p (branches t)]]
+                             (->Loc (->treeish t1) node (conj pts t) ->treeish))
                            (throw (ex-info "Can only insert down from a branch" {:loc this :t t}))))
   (delete [this] (if (not= top p)
                    (let [[[l & ls :as lefts] parent [r & rs :as rights]] p]
                      (cond
-                       r (->Loc r [lefts parent (or rs ())] ptrees branch? children section)
-                       l (->Loc l [(or ls ()) parent rights] ptrees branch? children section)
-                       true (->Loc (section (peek ptrees) ()) parent (pop ptrees) branch? children section)))
-                   (throw (ex-info "Can't remove at top" {:loc this :tree tree})))))
+                       r (->Loc r [lefts parent (or rs ())] pts ->treeish)
+                       l (->Loc l [(or ls ()) parent rights] pts ->treeish)
+                       true
+                       (->Loc (seed (peek pts) ()) parent (pop pts) ->treeish)))
+                   (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
 (defn nth-child [loc n] (cond
                           (zero? n) (throw (ex-info "Children are identified by positive integers allowed" {:loc loc :n n}))
@@ -183,6 +212,10 @@
       (right (insert-right youngest tree)))
     (insert-down loc tree)))
 
+(defn- make->treeish [branch?* branches* seed*] (fn [t] (if (branch?* t)
+                                                          (->Section (branches* t) t branch?* branches* seed*)
+                                                          t)))
+
 (defn zipper
   "Creates a new zipper structure.
 
@@ -196,7 +229,8 @@
 
   `root` is the root tree."
   [branch? children section root]
-  (->Loc root top [] branch? children section))
+  (let [->treeish (make->treeish branch? children section)]
+    (->Loc (->treeish root) top [] ->treeish)))
 
 (defn- fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
 
@@ -253,15 +287,15 @@
   ;; until they have identical parents and then move loc0 back through the recorded path of show loc1 arrived at the common ancestor.
   [loc0 loc1]
   (loop [loc0 loc0 loc1 loc1 s identity]
-    (let [[lefts0 parent0 _]  (:path loc0)
-          [lefts1 parent1 _]  (:path loc1)
+    (let [[lefts0 parent0 _]  (:p loc0)
+          [lefts1 parent1 _]  (:p loc1)
           ls1 (count lefts1)]
       (if (= parent0 parent1)
         (if (= lefts0 lefts1)
           (s loc0)  ; replay on loc0 how loc1 got here
           (recur (leftmost loc0) (leftmost loc1) (comp s (iteratively ls1 right))))
-        (let [ds0 (count (:ptrees loc0))
-              ds1 (count (:ptrees loc1))
+        (let [ds0 (count (:pts loc0))
+              ds1 (count (:pts loc1))
               delta-d (- ds1 ds0)]
           (cond
             (pos? delta-d) (recur loc0 (up loc1) (comp s (iteratively ls1 right) down))
@@ -296,8 +330,8 @@
 
 (extend-protocol ChildrenByName
   Loc
-  (down-to [this k] (when (.branch? this)
+  (down-to [this k] (when (branch? this)
                       (when-let [[lefts pivot rights] (pivot (branches this) k)]
-                        (let [path (.-path this)
-                              ptrees (conj (.-ptrees this) (.-tree this))]
-                          (->Loc pivot [lefts path rights] ptrees (.-branch? this) (.-children this) (.-section this)))))))
+                        (let [ptrees (conj (:pts this) (:t this))
+                              ->treeish (:->treeish this)]
+                          (->Loc (->treeish pivot) [lefts (:p this) rights] ptrees ->treeish))))))
