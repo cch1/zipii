@@ -9,7 +9,7 @@
   (let [t '(1 (21 22) 3)
         z (list-zip t)]
     (is (= t (-> z tree)))
-    (is (= t (-> z children)))
+    (is (= t (-> z branches)))
     (is (-> z top?))
     (is (= 1 (-> z down tree)))
     (is (not (-> z down top?)))
@@ -116,7 +116,7 @@
     (is (-> z next end?))
     (is (nil? (-> z prev))))
   (doseq [[t z] empty-zippers]
-    (is (empty? (-> z children)))
+    (is (empty? (-> z branches)))
     (is (-> z top?))
     (is (nil? (-> z left)))
     (is (nil? (-> z right)))
@@ -127,7 +127,7 @@
     (is (-> z next end?))
     (is (nil? (-> z prev))))
   (doseq [[t z] singleton-zippers]
-    (is (not (empty? (-> z children))))
+    (is (not (empty? (-> z branches))))
     (is ((partial instance? Loc) (-> z down)))
     (is (-> z next next end?))
     (is (= z (-> z next prev)))))
@@ -227,7 +227,7 @@
        (is (= t (val (tree (map-zip t)))))
        (is (= [::root t] (tree (map-zip ::root t))))
        (is (branch? (map-zip t)))
-       (is (= t (children (map-zip t))))
+       (is (= t (branches (map-zip t))))
        #_ (is (= t (let [nzip (map-zip t)] (make-tree nzip (tree t) t))))
        (is (nil? (parent (map-zip root))))))
 
@@ -303,7 +303,7 @@
 (deftest vector-zip-Zipper
   (let [t [0 1 2 [20 21] 3 [30 31 [310]]]]
     (is (= t (tree (vector-zip t))))
-    (is (= t (children (vector-zip t))))))
+    (is (= t (branches (vector-zip t))))))
 
 (deftest vector-zip-hierarchical-navigation
   (let [grandchild [[1111] 222]

@@ -19,8 +19,6 @@
 
 ;; Original Huet implementation
 (defprotocol Zipper
-  (tree [loc] "Return the item or (sub)tree) at this loc.")
-  (children [loc] "Return a seq of the child trees of the tree at this loc, or nil if it is not a branch.")
   (left [loc] "Return the loc of the left sibling of the tree at this loc, or nil.")
   (right [loc] "Return the loc of the right sibling of the tree at this loc, or nil.")
   (up [loc] "Return the loc of the parent of the tree at this loc (reflecting any changes), or nil if at the top.")
@@ -32,14 +30,22 @@
   (insert-down [loc t] "Insert t as the leftmost child of the tree (which must be a branch) at this loc, moving to the newly inserted t.")
   (delete [loc] "Delete the tree at loc, returning the loc that would have preceded it in a depth-first walk."))
 
+(defprotocol TreeLike
+  (tree [this] "Return the pure treeish data structure")
+  (branch? [this] "Can this tree-like have branches?")
+  (branches [this] "Return a seq of the child branches of this tree-like, or nil if it is not a branch")
+  (seed [this branches] "Return a new tree-like with the same treeish genesis but with the supplied branches"))
+
 (def top
   "A sentinel value representing the path of the tree at the top of a zipper"
   [() nil ()])
 
 (defrecord Loc [tree path ptrees branch? children section]
-  Zipper
+  TreeLike
   (tree [this] tree)
-  (children [this] (when (branch? tree) (children tree)))
+  (branches [this] (when (branch? tree) (children tree)))
+  (branch? [this] (branch? tree))
+  Zipper
   (left [this] (when (not= top path)
                  (let [[[l & ls :as lefts] parent rights] path
                        node [(or ls ()) parent (cons tree rights)]]
@@ -91,8 +97,13 @@
   "Create a sentinel loc that can only result from navigating beyond the limits of the data structure"
   [loc]
   (let [throw! (fn [](throw (ex-info "Operation not allowed on end loc" {::root loc})))]
-    ^{::end loc} (reify Zipper
-                   (tree [_] (throw!))
+    ^{::end loc} (reify
+                   TreeLike
+                   (tree [loc] (throw!))
+                   (branch? [loc] (throw!))
+                   (branches [loc] (throw!))
+                   (seed [loc branches] (throw!))
+                   Zipper
                    (left [loc] (throw!))
                    (right [loc] (throw!))
                    (up [loc] (throw!))
@@ -289,7 +300,9 @@
 (extend-protocol ChildrenByName
   Loc
   (down-to [this k] (when (.branch? this)
-                      (when-let [[lefts pivot rights] (pivot (children this) k)]
+                      (when-let [[lefts pivot rights] (pivot (branches this) k)]
                         (let [path (.-path this)
                               ptrees (conj (.-ptrees this) (.-tree this))]
                           (->Loc pivot [lefts path rights] ptrees (.-branch? this) (.-children this) (.-section this)))))))
+
+
