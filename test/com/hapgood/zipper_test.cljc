@@ -101,7 +101,7 @@
    (pair '(1) list-zip)
    (pair (clojure.lang.MapEntry. ::root {:a 1}) map-zip*)
    (pair [1] vector-zip)
-   (pair {:content [{:tag :a}]} xml-zip)])
+   (pair {:content [{:tag :a :content []}]} xml-zip)])
 
 (deftest invariant-access-move-query
   (doseq [[t z] degenerate-zippers]
