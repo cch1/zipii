@@ -229,7 +229,7 @@
 (def xml-zip
   "Return a zipper for xml elements (as from xml/parse), given a root element"
   (let [section (fn [tree children'] (assoc tree :content (and children' (apply vector children'))))]
-    (partial zipper (complement string?) (comp seq :content) section)))
+    (partial zipper (partial instance? clojure.lang.IPersistentMap) (comp seq :content) section)))
 
 (defn- iteratively [n f]
   "Return a function that composes n applications of f"
