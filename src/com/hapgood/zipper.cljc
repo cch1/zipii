@@ -23,7 +23,6 @@
   (right [loc] "Return the loc of the right sibling of the tree at this loc, or nil.")
   (up [loc] "Return the loc of the parent of the tree at this loc (reflecting any changes), or nil if at the top.")
   (down [loc] "Return the loc of the leftmost child of the tree at this loc, or nil if no children.")
-  (top? [loc] "Does this loc represent the top of the zipper?")
   (change [loc t] "Replace the tree at this loc with t, without moving.")
   (insert-left [loc t] "Insert t as the left sibling of the tree at this loc, without moving.")
   (insert-right [loc t] "Insert t as the right sibling of the tree at this loc, without moving.")
@@ -46,39 +45,38 @@
   (branches [this] (when (branch? tree) (children tree)))
   (branch? [this] (branch? tree))
   Zipper
-  (left [this] (when (not= top path)
-                 (let [[[l & ls :as lefts] parent rights] path
-                       node [(or ls ()) parent (cons tree rights)]]
-                   (when l (->Loc l node ptrees branch? children section)))))
-  (right [this] (when (not= top path)
-                  (let [[lefts parent [r & rs :as rights]] path
-                        node [(cons tree lefts) parent (or rs ())]]
-                    (when r (->Loc r node ptrees branch? children section)))))
-  (up [this] (when (not= top path)
-               (let [[lefts parent rights] path
-                     t (section (peek ptrees) (concat (reverse lefts) (cons tree rights)))]
-                 (->Loc t parent (pop ptrees) branch? children section))))
-  (down [this] (when (branch? tree)
-                 (when-let [[t & ts :as trees] (seq (children tree))]
-                   (->Loc t [() path (or ts ())] (conj ptrees tree) branch? children section))))
-  (top? [this] (= top path))
-  (change [this t] (->Loc t path ptrees branch? children section))
-  (insert-left [this t] (if (not= top path)
-                          (let [[lefts parent rights] path
-                                node [(cons t lefts) parent rights]]
-                            (->Loc tree node ptrees branch? children section))
-                          (throw (ex-info "Can't insert left of top" {:loc this :tree t}))))
-  (insert-right [this t] (if (not= top path)
-                           (let [[lefts parent rights] path
-                                 node [lefts parent (cons t rights)]]
-                             (->Loc tree node ptrees branch? children section))
-                           (throw (ex-info "Can't insert right of top" {:loc this :tree t}))))
-  (insert-down [this t] (if (branch? tree)
-                          (let [node [() path (children tree)]]
-                            (->Loc t node (conj ptrees tree) branch? children section))
-                          (throw (ex-info "Can only insert down from a branch" {:loc this :tree t}))))
-  (delete [this] (if (not= top path)
-                   (let [[[l & ls :as lefts] parent [r & rs :as rights]] path]
+  (left [this] (when (not= top p)
+                 (let [[[l & ls :as lefts] parent rights] p
+                       node [(or ls ()) parent (cons t rights)]]
+                   (when l (->Loc l node pts branch? children section)))))
+  (right [this] (when (not= top p)
+                  (let [[lefts parent [r & rs :as rights]] p
+                        node [(cons t lefts) parent (or rs ())]]
+                    (when r (->Loc r node pts branch? children section)))))
+  (up [this] (when (not= top p)
+               (let [[lefts parent rights] p
+                     t (section (peek pts) (concat (reverse lefts) (cons t rights)))]
+                 (->Loc t parent (pop pts) branch? children section))))
+  (down [this] (when (branch? t)
+                 (when-let [[t1 & trees] (seq (children t))]
+                   (->Loc t1 [() p (or trees ())] (conj pts t) branch? children section))))
+  (change [this t'] (->Loc t' p pts branch? children section))
+  (insert-left [this l] (if (not= top p)
+                          (let [[lefts parent rights] p
+                                node [(cons l lefts) parent rights]]
+                            (->Loc t node pts branch? children section))
+                          (throw (ex-info "Can't insert left of top" {:loc this :t t}))))
+  (insert-right [this r] (if (not= top p)
+                           (let [[lefts parent rights] p
+                                 node [lefts parent (cons r rights)]]
+                             (->Loc t node pts branch? children section))
+                           (throw (ex-info "Can't insert right of top" {:loc this :t t}))))
+  (insert-down [this t1] (if (branch? t)
+                           (let [node [() p (children t)]]
+                             (->Loc t1 node (conj pts t) branch? children section))
+                           (throw (ex-info "Can only insert down from a branch" {:loc this :t t}))))
+  (delete [this] (if (not= top p)
+                   (let [[[l & ls :as lefts] parent [r & rs :as rights]] p]
                      (cond
                        r (->Loc r [lefts parent (or rs ())] ptrees branch? children section)
                        l (->Loc l [(or ls ()) parent rights] ptrees branch? children section)
@@ -108,7 +106,6 @@
                    (right [loc] (throw!))
                    (up [loc] (throw!))
                    (down [loc] (throw!))
-                   (top? [loc] (throw!))
                    (change [loc t] (throw!))
                    (insert-left [loc t] (throw!))
                    (insert-right [loc t] (throw!))
@@ -124,7 +121,7 @@
   [loc]
   (or (end? loc)
       (loop [loc loc]
-        (if (top? loc) loc (recur (up loc))))))
+        (if-let [loc' (up loc)] (recur loc') loc))))
 
 (defn path
   "Return a seq of trees leading to this loc"
@@ -304,5 +301,3 @@
                         (let [path (.-path this)
                               ptrees (conj (.-ptrees this) (.-tree this))]
                           (->Loc pivot [lefts path rights] ptrees (.-branch? this) (.-children this) (.-section this)))))))
-
-

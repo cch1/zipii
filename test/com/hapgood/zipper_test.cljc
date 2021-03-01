@@ -10,9 +10,7 @@
         z (list-zip t)]
     (is (= t (-> z tree)))
     (is (= t (-> z branches)))
-    (is (-> z top?))
     (is (= 1 (-> z down tree)))
-    (is (not (-> z down top?)))
     (is (= '(21 22) (-> z down right tree)))
     (is (= 1 (-> z down right left tree)))
     (is (= t (-> z down up tree)))))
@@ -106,7 +104,6 @@
 (deftest invariant-access-move-query
   (doseq [[t z] degenerate-zippers]
     (is (= t (-> z tree)))
-    (is (-> z top?))
     (is (nil? (-> z left)))
     (is (nil? (-> z right)))
     (is (nil? (-> z up)))
@@ -117,7 +114,6 @@
     (is (nil? (-> z prev))))
   (doseq [[t z] empty-zippers]
     (is (empty? (-> z branches)))
-    (is (-> z top?))
     (is (nil? (-> z left)))
     (is (nil? (-> z right)))
     (is (nil? (-> z up)))
