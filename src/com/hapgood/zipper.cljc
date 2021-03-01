@@ -213,10 +213,12 @@
   "Return a zipper for nested vectors, given a root vector"
   (partial zipper vector? identity fill-template))
 
+(defn ->me [pr] (if (instance? clojure.lang.MapEntry pr) pr (clojure.lang.MapEntry. (first pr) (second pr) )))
+
 (def map-zip*
   "Return a zipper for nested map entries, given a root map entry"
-  (let [section (fn [[k children :as tree] children'] (clojure.lang.MapEntry. k (into (empty children) children')))]
-    (partial zipper (comp map? val) (comp val) section)))
+  (let [section (fn [[k children :as tree] children'] (clojure.lang.MapEntry. k (into (empty children) (map ->me) children')))]
+    (partial zipper (comp map? val ->me) (comp val ->me) section)))
 
 (defn map-zip
   "Return a zipper for nested maps, given a root map of children"
