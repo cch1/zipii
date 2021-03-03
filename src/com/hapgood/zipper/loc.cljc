@@ -28,13 +28,13 @@
   (branches [this] (zipper/branches t))
   zipper/Zipper
   (left [this] (when (not= top p)
-                 (let [[[l & ls :as lefts] parent rights] p
-                       node [(or ls ()) parent (cons t rights)]]
-                   (when l (->Loc (->treeish l) node pts ->treeish)))))
+                 (let [[lefts parent rights] p]
+                   (when-let [[l & ls] (seq lefts)]
+                     (->Loc (->treeish l) [(or ls ()) parent (cons t rights)] pts ->treeish)))))
   (right [this] (when (not= top p)
-                  (let [[lefts parent [r & rs :as rights]] p
-                        node [(cons t lefts) parent (or rs ())]]
-                    (when r (->Loc (->treeish r) node pts ->treeish)))))
+                  (let [[lefts parent rights] p]
+                    (when-let [[r & rs] (seq rights)]
+                      (->Loc (->treeish r) [(cons t lefts) parent (or rs ())] pts ->treeish)))))
   (up [this] (when (not= top p)
                (let [[lefts parent rights] p
                      t (zipper/seed (peek pts) (concat (reverse lefts) (cons t rights)))]
@@ -62,8 +62,7 @@
                      (cond
                        r (->Loc r [lefts parent (or rs ())] pts ->treeish)
                        l (->Loc l [(or ls ()) parent rights] pts ->treeish)
-                       true
-                       (->Loc (zipper/seed (peek pts) ()) parent (pop pts) ->treeish)))
+                       true (->Loc (zipper/seed (peek pts) ()) parent (pop pts) ->treeish)))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
 (defprotocol Pivotable

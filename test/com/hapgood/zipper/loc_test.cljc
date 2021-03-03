@@ -90,3 +90,8 @@
            (-> t list-zip down right (change 0) right up tree)))
     (is (= (-> t list-zip down right right (change 0) up tree)
            (-> t list-zip down right right (change 0) left up tree)))))
+
+(deftest edge-cases
+  (let [t '(nil nil nil '(nil nil))
+        z (list-zip t)]
+    (is (= t (-> z down right left up tree)))))
