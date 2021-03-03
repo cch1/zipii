@@ -1,9 +1,10 @@
-(ns com.hapgood.zipper-test
+(ns com.hapgood.zipii-test
   (:refer-clojure :exclude (replace remove next))
-  (:require [com.hapgood.zipper :refer :all]
+  (:require [com.hapgood.zipii :refer :all]
             [clojure.test :refer [deftest is are]])
-  (:import (clojure.lang ExceptionInfo)
-           (com.hapgood.zipper Loc)))
+  (:import (clojure.lang ExceptionInfo)))
+
+(def loc? (partial instance? com.hapgood.zipper.loc.Loc))
 
 (deftest access-move-query
   (let [t '(1 (21 22) 3)
@@ -26,7 +27,7 @@
 (deftest mutate
   (let [t '(1 (21) 3)
         z (list-zip t)]
-    (let [z (-> z down right (change 2))]
+    (let [z (-> z down right (replace 2))]
       (is (= 2 (-> z tree)))
       (is (= '(1 2 3) (-> z root tree))))
     (let [z (-> z down (insert-left 0))]
@@ -34,19 +35,7 @@
       (is (= '(0 1 (21) 3) (-> z root tree))))
     (let [z (-> z down (insert-right 3/2))]
       (is (= 1 (-> z tree)))
-      (is (= '(1 3/2 (21) 3) (-> z root tree))))
-    (let [z (-> z (insert-down 0))]
-      (is (= 0 (-> z tree)))
-      (is (= '(0 1 (21) 3) (-> z root tree))))
-    (let [z (-> z down right delete)]
-      (is (= 3 (-> z tree)))
-      (is (= '(1 3) (-> z root tree))))
-    (let [z (-> z down right right delete)]
-      (is (= '(21) (-> z tree)))
-      (is (= '(1 (21)) (-> z root tree))))
-    (let [z (-> z down right down delete)]
-      (is (= () (-> z tree)))
-      (is (= '(1 () 3) (-> z root tree))))))
+      (is (= '(1 3/2 (21) 3) (-> z root tree))))))
 
 (deftest extended-mutate
   (let [t '(1 (21 22) 3)
@@ -124,26 +113,26 @@
     (is (nil? (-> z prev))))
   (doseq [[t z] singleton-zippers]
     (is (not (empty? (-> z branches))))
-    (is ((partial instance? Loc) (-> z down)))
+    (is (loc? (-> z down)))
     (is (-> z next next end?))
     (is (= z (-> z next prev)))))
 
 (deftest invariant-mutate
   (doseq [[t z] degenerate-zippers]
-    (is (thrown? ExceptionInfo (-> z delete)))
+    (is (thrown? ExceptionInfo (-> z remove)))
     (is (thrown? ExceptionInfo (-> z (insert-right nil))))
     (is (thrown? ExceptionInfo (-> z (insert-left nil))))
-    (is (thrown? ExceptionInfo (-> z (insert-down nil)))))
+    (is (thrown? ExceptionInfo (-> z (insert-child nil)))))
   (doseq [[t z] empty-zippers]
-    (is (thrown? ExceptionInfo (-> z delete)))
+    (is (thrown? ExceptionInfo (-> z remove)))
     (is (thrown? ExceptionInfo (-> z (insert-right nil))))
     (is (thrown? ExceptionInfo (-> z (insert-left nil))))
-    (is ((partial instance? Loc) (-> z (insert-down [:a 1]) up)))
-    (is ((partial instance? Loc) (-> [] vector-zip (insert-down [:a 1]) up))))
+    (is (loc? (-> z (insert-child [:a 1]))))
+    (is (loc? (-> [] vector-zip (insert-child [:a 1])))))
   (doseq [[t z] singleton-zippers]
     (is (= t (let [z (-> z down)
                    item (-> z tree)]
-               (-> z delete (insert-child item) root tree))))))
+               (-> z remove (insert-child item) root tree))))))
 
 (deftest nth-child-porcelain
   (is (= 4 (-> (range) seq-zip (nth-child 5) tree))))
