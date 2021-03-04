@@ -67,9 +67,9 @@
 (defn root
   "Zip all the way up and return the loc of the root, reflecting any changes."
   [loc]
-  (or (end? loc)
-      (loop [loc loc]
-        (if-let [loc' (up loc)] (recur loc') loc))))
+  (tree (or (end? loc)
+            (loop [loc loc]
+              (if-let [loc' (up loc)] (recur loc') loc)))))
 
 (defn path
   "Return a seq of trees leading to this loc"
@@ -196,7 +196,7 @@
   ;; When loc0 and loc1 have the same parent and common elder siblings they are, by this definition, in the same position.
   ;; NB: this condition will not hold if either loc has zip-propogated independent changes up to a shared ancestor.
   ;; The intent of this operation is to "pull" loc0 to a DFS predecessor in its tree, dragging along any zipped changes loc0 may embody.
-  ;; To prevent indenpdent changes from being zipped into a parent (and changing their identity), the strategy is to move both locs up
+  ;; To prevent independent changes from being zipped into a parent (and changing their identity), the strategy is to move both locs up
   ;; until they have identical parents and then move loc0 back through the recorded path of show loc1 arrived at the common ancestor.
   [loc0 loc1]
   (loop [loc0 loc0 loc1 loc1 s identity]
@@ -222,3 +222,7 @@
   (slew (delete loc) (prev loc)))
 (def insert-child "Insert the item as the leftmost child of the node at this loc, without moving" (comp up insert-down))
 (def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))
+
+(def node tree)
+(def children branches)
+(def make-node seed)

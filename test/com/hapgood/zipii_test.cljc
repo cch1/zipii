@@ -8,43 +8,43 @@
 (deftest access-move-query
   (let [t '(1 (21 22) 3)
         z (list-zip t)]
-    (is (= t (-> z tree)))
-    (is (= t (-> z branches)))
-    (is (= 1 (-> z down tree)))
-    (is (= '(21 22) (-> z down right tree)))
-    (is (= 1 (-> z down right left tree)))
-    (is (= t (-> z down up tree)))))
+    (is (= t (-> z node)))
+    (is (= t (-> z children)))
+    (is (= 1 (-> z down node)))
+    (is (= '(21 22) (-> z down right node)))
+    (is (= 1 (-> z down right left node)))
+    (is (= t (-> z down up node)))))
 
 (deftest extended-move
   (let [t '(1 (21 22) 3)
         z (list-zip t)]
-    (is (= t (-> z down right down root tree)))
+    (is (= t (-> z down right down root)))
     (is (= [t '(21 22)] (-> z down right down path)))
-    (is (= 3 (-> z down rightmost tree)))
-    (is (= 1 (-> z down leftmost tree)))))
+    (is (= 3 (-> z down rightmost node)))
+    (is (= 1 (-> z down leftmost node)))))
 
 (deftest mutate
   (let [t '(1 (21) 3)
         z (list-zip t)]
     (let [z (-> z down right (replace 2))]
-      (is (= 2 (-> z tree)))
-      (is (= '(1 2 3) (-> z root tree))))
+      (is (= 2 (-> z node)))
+      (is (= '(1 2 3) (-> z root))))
     (let [z (-> z down (insert-left 0))]
-      (is (= 1 (-> z tree)))
-      (is (= '(0 1 (21) 3) (-> z root tree))))
+      (is (= 1 (-> z node)))
+      (is (= '(0 1 (21) 3) (-> z root))))
     (let [z (-> z down (insert-right 3/2))]
-      (is (= 1 (-> z tree)))
-      (is (= '(1 3/2 (21) 3) (-> z root tree))))))
+      (is (= 1 (-> z node)))
+      (is (= '(1 3/2 (21) 3) (-> z root))))))
 
 (deftest extended-mutate
   (let [t '(1 (21 22) 3)
         z (list-zip t)]
     (let [z (-> z down (edit dec))]
-      (is (= 0 (-> z tree)))
-      (is (= '(0 (21 22) 3) (-> z root tree))))
+      (is (= 0 (-> z node)))
+      (is (= '(0 (21 22) 3) (-> z root))))
     (let [z (-> z (append-down 4))]
-      (is (= 4 (-> z tree)))
-      (is (= '(1 (21 22) 3 4) (-> z root tree))))))
+      (is (= 4 (-> z node)))
+      (is (= '(1 (21 22) 3 4) (-> z root))))))
 
 (deftest iterative-move
   (let [t '(1 2 (31 32) 4)
@@ -52,10 +52,10 @@
         step (iterate next z)]
     (is (not (end? z)))
     (is (nil? (prev z)))
-    (is (= 1 (-> z next tree)))
-    (is (= '(31 32) (-> z next next next tree)))
-    (is (= 31 (-> z next next next next tree)))
-    (is (= 2 (-> z next next next next prev prev tree)))
+    (is (= 1 (-> z next node)))
+    (is (= '(31 32) (-> z next next next node)))
+    (is (= 31 (-> z next next next next node)))
+    (is (= 2 (-> z next next next next prev prev node)))
     (is (-> z next next next next next next next end?))
     (is (end? (nth step 100)))))
 
@@ -91,7 +91,7 @@
 
 (deftest invariant-access-move-query
   (doseq [[t z] degenerate-zippers]
-    (is (= t (-> z tree)))
+    (is (= t (-> z node)))
     (is (nil? (-> z left)))
     (is (nil? (-> z right)))
     (is (nil? (-> z up)))
@@ -101,7 +101,7 @@
     (is (-> z next end?))
     (is (nil? (-> z prev))))
   (doseq [[t z] empty-zippers]
-    (is (empty? (-> z branches)))
+    (is (empty? (-> z children)))
     (is (nil? (-> z left)))
     (is (nil? (-> z right)))
     (is (nil? (-> z up)))
@@ -111,7 +111,7 @@
     (is (-> z next end?))
     (is (nil? (-> z prev))))
   (doseq [[t z] singleton-zippers]
-    (is (not (empty? (-> z branches))))
+    (is (not (empty? (-> z children))))
     (is (loc? (-> z down)))
     (is (-> z next next end?))
     (is (= z (-> z next prev)))))
@@ -131,11 +131,11 @@
     (is (loc? (-> [] vector-zip (insert-child [:a 1])))))
   (doseq [[t z] singleton-zippers]
     (is (= t (let [z (-> z down)
-                   item (-> z tree)]
-               (-> z remove (insert-child item) root tree))))))
+                   item (-> z node)]
+               (-> z remove (insert-child item) root))))))
 
 (deftest nth-child-porcelain
-  (is (= 4 (-> (range) seq-zip (nth-child 5) tree))))
+  (is (= 4 (-> (range) seq-zip (nth-child 5) node))))
 
 ;; Tests for specific zipper variants
 
@@ -144,8 +144,8 @@
         child (list grandchild 22)
         t (list child 2)
         z (list-zip t)]
-    (is (= child (-> z down tree)))
-    (is (= grandchild (-> z down down tree)))
+    (is (= child (-> z down node)))
+    (is (= grandchild (-> z down down node)))
     (is (= [t child] (-> z down down path)))))
 
 (deftest list-zip-ordered-navigation
@@ -153,7 +153,7 @@
         z (list-zip t)]
     (is (nil? (-> z right)))
     (is (nil? (-> z left)))
-    (is (= 2 (-> z down right tree)))
+    (is (= 2 (-> z down right node)))
     (is (nil? (-> z down right right right right)))
     (is (= (-> z down) (-> z down right left)))
     (is (nil? (-> z down left)))))
@@ -172,16 +172,16 @@
 (deftest list-zip-update
   (let [t '(1 2 (31 32) 4)
         z (list-zip t)]
-    (is (= '(1 2 (30 31 32) 4) (-> z down right right down (insert-left 30) root tree)))
-    (is (= '(1 2 (31 32 33) 4) (-> z down right right down right (insert-right 33) root tree)))
+    (is (= '(1 2 (30 31 32) 4) (-> z down right right down (insert-left 30) root)))
+    (is (= '(1 2 (31 32 33) 4) (-> z down right right down right (insert-right 33) root)))
     (is (thrown? Exception (-> z (insert-right 33))))
     (is (thrown? Exception (-> z (insert-left 33))))
-    (is (= '(1 2 3 4) (-> z down right right (replace 3) root tree)))
-    (is (= '(0 2 (31 32) 4) (-> z down (edit dec) root tree)))
-    (is (= '(0 1 2 (31 32) 4) (-> z (insert-child 0) root tree)))
-    (is (= '(1) (-> (list-zip '()) (insert-child 1) tree)))
-    (is (= '(1 2 (31 32) 4 5) (-> z (append-child 5) root tree)))
-    (is (= '(1) (-> (list-zip '()) (append-child 1) tree)))))
+    (is (= '(1 2 3 4) (-> z down right right (replace 3) root)))
+    (is (= '(0 2 (31 32) 4) (-> z down (edit dec) root)))
+    (is (= '(0 1 2 (31 32) 4) (-> z (insert-child 0) root)))
+    (is (= '(1) (-> (list-zip '()) (insert-child 1) node)))
+    (is (= '(1 2 (31 32) 4 5) (-> z (append-child 5) root)))
+    (is (= '(1) (-> (list-zip '()) (append-child 1) node)))))
 
 (deftest list-zip-iterate
   (let [t '(1 2 (31 32) 4)
@@ -189,31 +189,31 @@
         step (iterate next z)]
     (is (not (end? z)))
     (is (nil? (prev z)))
-    (is (= 1 (-> z next tree)))
-    (is (= '(31 32) (-> z next next next tree)))
-    (is (= 31 (-> z next next next next tree)))
-    (is (= 2 (-> z next next next next prev prev tree)))
+    (is (= 1 (-> z next node)))
+    (is (= '(31 32) (-> z next next next node)))
+    (is (= 31 (-> z next next next next node)))
+    (is (= 2 (-> z next next next next prev prev node)))
     (is (-> z next next next next next next next end?))
     (is (end? (nth step 100)))))
 
 (deftest list-zip-remove
   (let [t '(1 2 (31 32) 4)
         z (list-zip t)]
-    (is (= '(1 2 4) (-> z down right right remove root tree)))
+    (is (= '(1 2 4) (-> z down right right remove root)))
     (is (thrown? Exception (-> z remove)))
-    (is (= '(1 2 () 4) (-> z down right right down right remove remove root tree)))
-    (is (= `(1 2 4) (-> z down right right down right remove remove remove root tree)))
+    (is (= '(1 2 () 4) (-> z down right right down right remove remove root)))
+    (is (= `(1 2 4) (-> z down right right down right remove remove remove root)))
     ;; This next one exposes a bug in clojure.zip...
-    (is (= () (-> (list-zip '(0)) down remove tree)))))
+    (is (= () (-> (list-zip '(0)) down remove node)))))
 
 ;; MapZipper
 #_ (deftest map-zip-Zipper
      (let [t {:a 1 :b 2 :c {:d 3 :e 4}}]
-       (is (= t (val (tree (map-zip t)))))
-       (is (= [::root t] (tree (map-zip ::root t))))
+       (is (= t (val (node (map-zip t)))))
+       (is (= [::root t] (node (map-zip ::root t))))
        (is (branch? (map-zip t)))
-       (is (= t (branches (map-zip t))))
-       #_ (is (= t (let [nzip (map-zip t)] (make-tree nzip (tree t) t))))
+       (is (= t (children (map-zip t))))
+       #_ (is (= t (let [nzip (map-zip t)] (make-node nzip (node t) t))))
        (is (nil? (parent (map-zip root))))))
 
 (deftest map-zip-hierarchical-navigation
@@ -221,12 +221,12 @@
         child {:b grandchild}
         t {:a child}
         z (map-zip ::root t)]
-    (is (= [:a child] (-> z down down up tree)))
+    (is (= [:a child] (-> z down down up node)))
     (is (empty? (path z)))
-    (is (= [:a child] (-> z down tree)))
-    (is (= [:b grandchild] (-> z down down tree)))
-    (is (= t (val (-> z down up tree))))
-    (is (= t (val (-> z down down root tree))))
+    (is (= [:a child] (-> z down node)))
+    (is (= [:b grandchild] (-> z down down node)))
+    (is (= t (val (-> z down up node))))
+    (is (= t (val (-> z down down root))))
     (is (= [[::root t] [:a child]] (-> z down down path)))
     (is (nil? (-> z up)))
     (is (nil? (-> z down down down down)))))
@@ -236,7 +236,7 @@
         z (map-zip ::root t)]
     (is (nil? (-> z right)))
     (is (nil? (-> z left)))
-    (is (= [:b 2] (-> z down right tree)))
+    (is (= [:b 2] (-> z down right node)))
     (is (nil? (-> z down right right right right)))
     (is (= (-> z down) (-> z down right left)))
     (is (nil? (-> z down left)))
@@ -251,16 +251,16 @@
 (deftest map-zip-update
   (let [t {:a 1 :b 2 :c {:c1 31 :c2 32} :f 5}
         z (map-zip ::root t)]
-    (is (= [::root {:a 1 :b 2 :c {:c0 30 :c1 31 :c2 32} :f 5}] (-> z down right right down (insert-left [:c0 30]) root tree)))
-    (is (= [::root {:a 1 :b 2 :c {:c1 31 :c2 32 :c3 33} :f 5}] (-> z down right right down right (insert-right [:c3 33]) root tree)))
+    (is (= [::root {:a 1 :b 2 :c {:c0 30 :c1 31 :c2 32} :f 5}] (-> z down right right down (insert-left [:c0 30]) root)))
+    (is (= [::root {:a 1 :b 2 :c {:c1 31 :c2 32 :c3 33} :f 5}] (-> z down right right down right (insert-right [:c3 33]) root)))
     (is (thrown? Exception (-> z (insert-right [:z 33]))))
     (is (thrown? Exception (-> z (insert-left [:z 33]))))
-    (is (= [::root {:a 1 :b 2 :c 3 :f 5}] (-> z down right right (replace [:c 3]) root tree)))
-    (is (= [::root {:a 0 :b 2 :c {:c1 31 :c2 32} :f 5}] (-> z down (edit #(update % 1 dec)) root tree)))
-    (is (= [::root {:z 0 :a 1 :b 2 :c {:c1 31 :c2 32} :f 5}] (-> z (insert-child [:z 0]) root tree)))
-    (is (= [::root {:a 1}] (-> (map-zip ::root {}) (insert-child [:a 1]) root tree)))
-    (is (= [::root {:a 1 :b 2 :c {:c1 31 :c2 32} :f 5 :z 9}] (-> z (append-child [:z 9]) root tree)))
-    (is (= [::root {:a 1}] (-> (map-zip ::root {}) (append-child [:a 1]) root tree)))))
+    (is (= [::root {:a 1 :b 2 :c 3 :f 5}] (-> z down right right (replace [:c 3]) root)))
+    (is (= [::root {:a 0 :b 2 :c {:c1 31 :c2 32} :f 5}] (-> z down (edit #(update % 1 dec)) root)))
+    (is (= [::root {:z 0 :a 1 :b 2 :c {:c1 31 :c2 32} :f 5}] (-> z (insert-child [:z 0]) root)))
+    (is (= [::root {:a 1}] (-> (map-zip ::root {}) (insert-child [:a 1]) root)))
+    (is (= [::root {:a 1 :b 2 :c {:c1 31 :c2 32} :f 5 :z 9}] (-> z (append-child [:z 9]) root)))
+    (is (= [::root {:a 1}] (-> (map-zip ::root {}) (append-child [:a 1]) root)))))
 
 (deftest map-zip-iterate
   (let [t {:a 1 :b 2 :c {:c1 31 :c2 32} :f 5}
@@ -268,39 +268,39 @@
         step (iterate next z)]
     (is (not (end? z)))
     (is (nil? (prev z)))
-    (is (= [:a 1] (-> z next tree)))
-    (is (= [:c {:c1 31 :c2 32}] (-> z next next next tree)))
-    (is (= [:c1 31] (-> z next next next next tree)))
-    (is (= [:b 2] (-> z next next next next prev prev tree)))
+    (is (= [:a 1] (-> z next node)))
+    (is (= [:c {:c1 31 :c2 32}] (-> z next next next node)))
+    (is (= [:c1 31] (-> z next next next next node)))
+    (is (= [:b 2] (-> z next next next next prev prev node)))
     (is (-> z next next next next next next next end?))
     (is (end? (nth step 100)))))
 
 (deftest map-zip-remove
   (let [t {:a 1 :b 2 :c {:c1 31 :c2 32} :f 5}
         z (map-zip ::root t)]
-    (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right remove root tree)))
+    (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right remove root)))
     (is (thrown? Exception (-> z remove)))
-    (is (= [::root {:a 1 :b 2 :c {} :f 5}] (-> z down right right down right remove remove root tree)))
-    (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right down right remove remove remove root tree)))
-    (is (= [::root {}] (-> (map-zip ::root {:a 1}) down remove tree)))))
+    (is (= [::root {:a 1 :b 2 :c {} :f 5}] (-> z down right right down right remove remove root)))
+    (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right down right remove remove remove root)))
+    (is (= [::root {}] (-> (map-zip ::root {:a 1}) down remove node)))))
 
 ;; VecZipper
 (deftest vector-zip-Zipper
   (let [t [0 1 2 [20 21] 3 [30 31 [310]]]]
-    (is (= t (tree (vector-zip t))))
-    (is (= t (branches (vector-zip t))))))
+    (is (= t (node (vector-zip t))))
+    (is (= t (children (vector-zip t))))))
 
 (deftest vector-zip-hierarchical-navigation
   (let [grandchild [[1111] 222]
         child [grandchild 22]
         t [child 2]
         z (vector-zip t)]
-    #_ (is (= child (-> z down down parent tree)))
+    #_ (is (= child (-> z down down parent node)))
     (is (empty? (path z)))
-    (is (= child (-> z down tree)))
-    (is (= grandchild (-> z down down tree)))
-    (is (= t (-> z down up tree)))
-    (is (= t (-> z down down root tree)))
+    (is (= child (-> z down node)))
+    (is (= grandchild (-> z down down node)))
+    (is (= t (-> z down up node)))
+    (is (= t (-> z down down root)))
     (is (= [t child] (-> z down down path)))
     (is (nil? (-> z up)))
     (is (nil? (-> z down down down down down)))))
@@ -310,7 +310,7 @@
         z (vector-zip t)]
     (is (nil? (-> z right)))
     (is (nil? (-> z left)))
-    (is (= 2 (-> z down right tree)))
+    (is (= 2 (-> z down right node)))
     (is (nil? (-> z down right right right right)))
     (is (= (-> z down) (-> z down right left)))
     (is (nil? (-> z down left)))
@@ -325,15 +325,15 @@
 (deftest vector-zip-update
   (let [t [1 2 [31 32] 4]
         z (vector-zip t)]
-    (is (= [1 2 [30 31 32] 4] (-> z down right right down (insert-left 30) root tree)))
-    (is (= [1 2 [31 32 33] 4] (-> z down right right down right (insert-right 33) root tree)))
+    (is (= [1 2 [30 31 32] 4] (-> z down right right down (insert-left 30) root)))
+    (is (= [1 2 [31 32 33] 4] (-> z down right right down right (insert-right 33) root)))
     (is (thrown? Exception (-> z (insert-right 33))))
     (is (thrown? Exception (-> z (insert-left 33))))
-    (is (= [1 2 3 4] (-> z down right right (replace 3) root tree)))
-    (is (= [0 2 [31 32] 4] (-> z down (edit dec) root tree)))
-    (is (= [0 1 2 [31 32] 4] (-> z (insert-child 0) root tree)))
-    (is (= [1] (-> (list-zip '()) (insert-child 1) tree)))
-    (is (= [1 2 [31 32] 4 5] (-> z (append-child 5) root tree)))))
+    (is (= [1 2 3 4] (-> z down right right (replace 3) root)))
+    (is (= [0 2 [31 32] 4] (-> z down (edit dec) root)))
+    (is (= [0 1 2 [31 32] 4] (-> z (insert-child 0) root)))
+    (is (= [1] (-> (list-zip '()) (insert-child 1) node)))
+    (is (= [1 2 [31 32] 4 5] (-> z (append-child 5) root)))))
 
 (deftest vector-zip-iterate
   (let [t [1 2 [31 32] 4]
@@ -341,21 +341,21 @@
         step (iterate next z)]
     (is (not (end? z)))
     (is (nil? (prev z)))
-    (is (= 1 (-> z next tree)))
-    (is (= [31 32] (-> z next next next tree)))
-    (is (= 31 (-> z next next next next tree)))
-    (is (= 2 (-> z next next next next prev prev tree)))
+    (is (= 1 (-> z next node)))
+    (is (= [31 32] (-> z next next next node)))
+    (is (= 31 (-> z next next next next node)))
+    (is (= 2 (-> z next next next next prev prev node)))
     (is (-> z next next next next next next next end?))
     (is (end? (nth step 100)))))
 
 (deftest vector-zip-remove
   (let [t [1 2 [31 32] 4]
         z (vector-zip t)]
-    (is (= [1 2 4] (-> z down right right remove root tree)))
+    (is (= [1 2 4] (-> z down right right remove root)))
     (is (thrown? Exception (-> z remove)))
-    (is (= [1 2 [] 4] (-> z down right right down right remove remove root tree)))
-    (is (= [1 2 4] (-> z down right right down right remove remove remove root tree)))
-    (is (= [] (-> (vector-zip [0]) down remove tree)))))
+    (is (= [1 2 [] 4] (-> z down right right down right remove remove root)))
+    (is (= [1 2 4] (-> z down right right down right remove remove remove root)))
+    (is (= [] (-> (vector-zip [0]) down remove node)))))
 
 ;; index/key navigation
 (deftest map-zip-key-navigation
@@ -363,8 +363,8 @@
         child {:a0 10 :a1 11 :a2 12 :a3 grandchild :a4 14}
         t {:a child :b 2}
         z (map-zip ::root t)]
-    (is (= [:a child] (-> z (down-to :a) tree)))
-    (is (= [:a00 130] (-> z (down-to :a) (down-to :a3) (down-to :a00) tree)))
+    (is (= [:a child] (-> z (down-to :a) node)))
+    (is (= [:a00 130] (-> z (down-to :a) (down-to :a3) (down-to :a00) node)))
     (is (nil? (-> z (down-to :c))))))
 
 (deftest vector-zip-index-navigation
@@ -372,59 +372,59 @@
         child [10 11 12 grandchild 14]
         t [child 2]
         z (vector-zip t)]
-    (is (= child (-> z (down-to 0) tree)))
-    (is (= 130 (-> z (down-to 0) (down-to 3) (down-to 0) tree)))
+    (is (= child (-> z (down-to 0) node)))
+    (is (= 130 (-> z (down-to 0) (down-to 3) (down-to 0) node)))
     (is (nil? (-> z (down-to 9))))))
 
 ;; Edge case exploration
 (deftest move-and-edit
   (let [t [1 1 3 [4 5]]]
-    (is (= (-> t vector-zip down right (edit inc) root tree)
-           (-> t vector-zip down right (edit inc) right root tree)))
-    (is (= (-> t vector-zip down right right (edit inc) root tree)
-           (-> t vector-zip down right right (edit inc) left root tree)))
-    (is (= (-> t vector-zip down rightmost left (edit inc) root tree)
-           (-> t vector-zip down right right (edit inc) left root tree)))))
+    (is (= (-> t vector-zip down right (edit inc) root)
+           (-> t vector-zip down right (edit inc) right root)))
+    (is (= (-> t vector-zip down right right (edit inc) root)
+           (-> t vector-zip down right right (edit inc) left root)))
+    (is (= (-> t vector-zip down rightmost left (edit inc) root)
+           (-> t vector-zip down right right (edit inc) left root)))))
 
 (deftest preserve-type-on-edit
   (let [t (sorted-set 1 2 3)]
     (is (instance? (class t)
-                   (-> t coll-zip down right (edit dec) root tree))))
+                   (-> t coll-zip down right (edit dec) root))))
   (let [t (list 1 2 3)]
     (is (instance? (class t)
-                   (-> t list-zip down right (edit dec) root tree))))
+                   (-> t list-zip down right (edit dec) root))))
   (let [t (sorted-map :a 1 :b 2 :c 3)]
     (is (instance? (class t)
-                   (-> t map-zip down right (edit #(update % 1 dec)) root tree val))))
+                   (-> t map-zip down right (edit #(update % 1 dec)) root val))))
   (let [t (vector-of :long 1 2 3)]
     (is (instance? (class t)
-                   (-> t vector-zip down right (edit inc) root tree)))))
+                   (-> t vector-zip down right (edit inc) root)))))
 
 ;; RH compatibility shims
 (deftest replace-shim
   (let [t [1 2 3 [4 5]]
         z (vector-zip t)]
     (let [z (-> z down right right right down (replace 9/2))]
-      (is (= 9/2 (-> z tree)))
-      (is (= [1 2 3 [9/2 5]] (-> z root tree))))))
+      (is (= 9/2 (-> z node)))
+      (is (= [1 2 3 [9/2 5]] (-> z root))))))
 
 (deftest remove-shim
   (let [t [1 2 3 [4 5]]
         z (vector-zip t)]
     (let [z (-> z down right right right down remove)]
-      (is (= [5] (-> z tree)))
-      (is (= [1 2 3 [5]] (-> z root tree))))))
+      (is (= [5] (-> z node)))
+      (is (= [1 2 3 [5]] (-> z root))))))
 
 (deftest insert-child-shim
   (let [t [1 2 3 [4 5]]
         z (vector-zip t)]
     (let [z (-> z down right right right (insert-child 7/2))]
-      (is (= [7/2 4 5] (-> z tree)))
-      (is (= [1 2 3 [7/2 4 5]] (-> z root tree))))))
+      (is (= [7/2 4 5] (-> z node)))
+      (is (= [1 2 3 [7/2 4 5]] (-> z root))))))
 
 (deftest append-child-shim
   (let [t [1 2 3 [4 5]]
         z (vector-zip t)]
     (let [z (-> z down right right right (append-child 6))]
-      (is (= [4 5 6] (-> z tree)))
-      (is (= [1 2 3 [4 5 6]] (-> z root tree))))))
+      (is (= [4 5 6] (-> z node)))
+      (is (= [1 2 3 [4 5 6]] (-> z root))))))
