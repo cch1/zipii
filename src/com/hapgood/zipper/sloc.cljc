@@ -72,25 +72,21 @@
 
 
 ;; TODO: unify branch? and branches
-(defn- make->treeish [branch?* branches* seed*] (comp (fn [t] (if-let [[c & cs] (when (zipper/branch? t) (seq (zipper/branches t)))]
-                                                                (->Siblings () c (or cs ()) t)
-                                                                t))
-                                                      (loc/make->treeish branch?* branches* seed*)))
+(defn- make->treeish [branches* seed*] (comp (fn [t] (if-let [[c & cs] (seq (zipper/branches t))]
+                                                       (->Siblings () c (or cs ()) t)
+                                                       t))
+                                             (loc/make->treeish branches* seed*)))
 
 (defn zipper
   "Creates a new zipper structure.
 
-  `branch?` is a predicate fn that, given a tree-ish, returns true if it can have
-  child branches, even it if currently does not.
+  `branches` is a fn that, given a (sub)tree, returns a possibly empty sequence of its subtrees, or nil if it is not a branch.
 
-  `children` is a fn that, given a (sub)tree, returns a seqable of its child branches, or nil if it cannot have child branches
+  `seed` is a constructor fn that, given a (sub)tree and a seq of branches, returns a new (sub)tree having the supplied child branches.
 
-  `section` is a constructor fn that, given a (sub)tree and a seq of children, returns a new tree with
-  with the supplied children.
-
-  `root` is the root tree."
-  [branch? children section root]
-  (let [->treeish (make->treeish branch? children section)]
+  `root` is the root of the tree."
+  [branches seed root]
+  (let [->treeish (make->treeish branches seed)]
     (->SLoc (->treeish root) top [] ->treeish)))
 
 (defn loc? [obj] (instance? SLoc obj))

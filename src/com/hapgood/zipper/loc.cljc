@@ -1,19 +1,19 @@
 (ns com.hapgood.zipper.loc
   (:require [com.hapgood.zipper :as zipper]))
 
-(deftype Section [trees treeish branch? branches seed]
+(deftype Section [trees treeish branches seed]
   clojure.lang.Indexed
   (nth [this n] (nth trees n))
   zipper/TreeLike
   (tree [this] (seed treeish (map zipper/tree trees)))
   (branch? [_] true)
   (branches [_] trees)
-  (seed [_ bs] (let [t (seed treeish (map zipper/tree bs))] (Section. (branches t) t branch? branches seed)))
+  (seed [_ bs] (let [t (seed treeish (map zipper/tree bs))] (Section. (branches t) t branches seed)))
   Object
   (equals [this other] (and (= (type this) (type other))
-                            (= [trees treeish branch? branches seed]
-                               [(.-trees other) (.-treeish other) (.-branch? other) (.-branches other) (.-seed other)])))
-  (hashCode [this] (.hashCode [trees treeish branch? branches seed])))
+                            (= [trees treeish branches seed]
+                               [(.-trees other) (.-treeish other) (.-branches other) (.-seed other)])))
+  (hashCode [this] (.hashCode [trees treeish branches seed])))
 
 (defmethod print-method Section [s w] (.write w "<") (.write w (str (zipper/branches s))) (.write w ">"))
 
@@ -91,24 +91,20 @@
                               ->treeish (:->treeish this)]
                           (->Loc (->treeish pivot) [lefts (:p this) rights] ptrees ->treeish))))))
 
-(defn make->treeish [branch?* branches* seed*] (fn [t] (if (branch?* t)
-                                                         (->Section (branches* t) t branch?* branches* seed*)
-                                                         t)))
+(defn make->treeish [branches* seed*] (fn [t] (if-let [branches (branches* t)]
+                                                (->Section branches t branches* seed*)
+                                                t)))
 
 (defn zipper
   "Creates a new zipper structure.
 
-  `branch?` is a predicate fn that, given a node, returns true if it can have
-  children, even it if currently does not.
+  `branches` is a fn that, given a (sub)tree, returns a possibly empty sequence of its subtrees, or nil if it is not a branch.
 
-  `children` is a fn that, given a (sub)tree, returs a seqable of its children.
+  `seed` is a constructor fn that, given a (sub)tree and a seq of branches, returns a new (sub)tree having the supplied child branches.
 
-  `section` is a constructor fn that, given a (sub)tree and a seq of children, returns a new tree with
-  with the supplied children.
-
-  `root` is the root tree."
-  [branch? children section root]
-  (let [->treeish (make->treeish branch? children section)]
+  `root` is the root of the tree."
+  [branches seed root]
+  (let [->treeish (make->treeish branches seed)]
     (->Loc (->treeish root) top [] ->treeish)))
 
 (defn loc? [obj] (instance? Loc obj))

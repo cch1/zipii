@@ -1,10 +1,9 @@
 (ns com.hapgood.zipii-test
   (:refer-clojure :exclude (replace remove next))
   (:require [com.hapgood.zipii :refer :all]
+            [com.hapgood.zipper.loc :refer [loc?]]
             [clojure.test :refer [deftest is are]])
   (:import (clojure.lang ExceptionInfo)))
-
-(def loc? (partial instance? com.hapgood.zipper.loc.Loc))
 
 (deftest access-move-query
   (let [t '(1 (21 22) 3)
@@ -127,7 +126,8 @@
     (is (thrown? ExceptionInfo (-> z remove)))
     (is (thrown? ExceptionInfo (-> z (insert-right nil))))
     (is (thrown? ExceptionInfo (-> z (insert-left nil))))
-    (is (loc? (-> z (insert-child [:a 1]))))
+    (is (loc? (-> z (insert-child [:a 1])))
+        (format "Shit doesn't work: %s %s" t z))
     (is (loc? (-> [] vector-zip (insert-child [:a 1])))))
   (doseq [[t z] singleton-zippers]
     (is (= t (let [z (-> z down)

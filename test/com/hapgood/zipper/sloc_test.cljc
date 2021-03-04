@@ -7,7 +7,7 @@
 
 (def list-zip
   "Return a zipper for nested lists, given a root list"
-  (partial zipper list? identity (comp reverse (fn [tree children] (into (empty tree) children)))))
+  (partial zipper (fn [t] (when (list? t) t)) (comp reverse (fn [tree children] (into (empty tree) children)))))
 
 (deftest access-move-query
   (let [t '(1 (21 22) 3)
