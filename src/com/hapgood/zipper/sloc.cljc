@@ -70,7 +70,6 @@
                        true (->SLoc (zipper/seed (peek ptrees) ()) parent (pop ptrees) ->treeish)))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
-
 ;; TODO: unify branch? and branches
 (defn- make->treeish [branches* seed*] (comp (fn [t] (if-let [[c & cs] (seq (zipper/branches t))]
                                                        (->Siblings () c (or cs ()) t)

@@ -35,7 +35,6 @@
 
 (def nth-child z/nth-child)
 
-(def down-to loc/down-to)
 ;; RH/clojure.zip compatibility: shims and extensions
 
 ;; Iterative navigation

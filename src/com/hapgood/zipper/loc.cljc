@@ -65,32 +65,6 @@
                        true (->Loc (zipper/seed (peek pts) ()) parent (pop pts) ->treeish)))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
-(defprotocol Pivotable
-  (pivot [this k] "Pivot the elements of this collection and return a triple of [elements-before element-at elements-after"))
-
-(extend-protocol Pivotable
-  clojure.lang.MapEquivalence
-  (pivot [this k] (when-let [me (find this k)]
-                    (let [mes (vec this)
-                          i (.indexOf (vec this) me)
-                          [befores pivot-and-afters] (split-at i mes)]
-                      [(into (empty this) befores) me (into (empty this) (rest pivot-and-afters))])))
-  clojure.lang.IPersistentVector
-  (pivot [this k]
-    (when-let [v (get this k)]
-      [(subvec this 0 k) v (subvec this (inc k))])))
-
-(defprotocol ChildrenByName
-  (down-to [loc cname] "Return a triple of [children-before pivot-child children-after"))
-
-(extend-protocol ChildrenByName
-  Loc
-  (down-to [this k] (when (zipper/branch? this)
-                      (when-let [[lefts pivot rights] (pivot (zipper/branches this) k)]
-                        (let [ptrees (conj (:pts this) (:t this))
-                              ->treeish (:->treeish this)]
-                          (->Loc (->treeish pivot) [lefts (:p this) rights] ptrees ->treeish))))))
-
 (defn make->treeish [branches* seed*] (fn [t] (if-let [branches (branches* t)]
                                                 (->Section branches t branches* seed*)
                                                 t)))
