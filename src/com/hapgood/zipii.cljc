@@ -166,6 +166,7 @@
 (def children branches)
 (def make-node seed)
 
+;; https://insideclojure.org/2015/01/02/sequences/
 (defn zipper
   "Creates a new zipper structure.
 
@@ -208,7 +209,7 @@
 (def map-zip*
   "Return a zipper for nested map entries, given a root map entry"
   (let [section (fn [[k children :as tree] children'] (clojure.lang.MapEntry. k (into (empty children) (map ->me) children')))]
-    (partial zipper (comp map? val ->me) (comp val ->me) section)))
+    (partial zipper (comp map? val ->me) (comp sequence val ->me) section)))
 
 (defn map-zip
   "Return a zipper for nested maps, given a root map of children"
@@ -218,5 +219,5 @@
 
 (def xml-zip
   "Return a zipper for xml elements (as from xml/parse), given a root element"
-  (let [section (fn [tree children'] (assoc tree :content (and children' (apply vector children'))))]
-    (partial zipper (partial instance? clojure.lang.IPersistentMap) :content section)))
+  (let [section (fn [tree children'] (assoc tree :content (apply vector children')))]
+    (partial zipper (partial instance? clojure.lang.IPersistentMap) (comp sequence :content) section)))
