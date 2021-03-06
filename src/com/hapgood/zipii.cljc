@@ -14,11 +14,6 @@
 ;; 7. The vocabulary diverges from Huet and while Hickey's seems more reasonable, the Huet paper is an excellent implementation guide and sticking to his vocabulary reinforces that effect.
 ;; 8. Exceptions are not very precise nor are they data-laden.
 
-;; Issues with the OCaml psuedo-implementation by Huet:
-;; 1. Insertion is inconsistent with respect to the resulting position: at inserted element for some (`insert-down`) but in the original position (`insert-left`, `insert-right`) for others.  Did Hickey choose a different name (`insert-child`, with no movement, for `insert-down`) to be consistent without clashing with the original implementation?
-;; 2. The implementation does not provide much detail on error conditions/failures and their translation in Clojure.
-;; 3. Without the complexity of scars, performance is likely to suffer when movement is more vertical.
-
 (def left z/left)
 (def right z/right)
 (def up z/up)
@@ -130,6 +125,47 @@
       (right (insert-right youngest tree)))
     (insert-down loc tree)))
 
+(defn- iteratively [n f]
+  "Return a function that composes n applications of f"
+  (fn [x] (loop [i n x x]
+            (if (zero? i) x (recur (dec i) (f x))))))
+
+(defn- slew
+  "Slew the first loc to the DFS position of the second, presuming loc1's DFS predecessors have not been changed in loc0's tree"
+  ;; When loc0 and loc1 have the same parent and common elder siblings they are, by this definition, in the same position.
+  ;; NB: this condition will not hold if either loc has zip-propogated independent changes up to a shared ancestor.
+  ;; The intent of this operation is to "pull" loc0 to a DFS predecessor in its tree, dragging along any zipped changes loc0 may embody.
+  ;; To prevent independent changes from being zipped into a parent (and changing their identity), the strategy is to move both locs up
+  ;; until they have identical parents and then move loc0 back through the recorded path of show loc1 arrived at the common ancestor.
+  [loc0 loc1]
+  (loop [loc0 loc0 loc1 loc1 s identity]
+    (let [[lefts0 parent0 _]  (:p loc0)
+          [lefts1 parent1 _]  (:p loc1)
+          ls1 (count lefts1)]
+      (if (= parent0 parent1)
+        (if (= lefts0 lefts1)
+          (s loc0)  ; replay on loc0 how loc1 got here
+          (recur (leftmost loc0) (leftmost loc1) (comp s (iteratively ls1 right))))
+        (let [ds0 (count (:pts loc0))
+              ds1 (count (:pts loc1))
+              delta-d (- ds1 ds0)]
+          (cond
+            (pos? delta-d) (recur loc0 (up loc1) (comp s (iteratively ls1 right) down))
+            (neg? delta-d) (recur (up loc0) loc1 s)
+            true (recur (up loc0) (up loc1) (comp s (iteratively ls1 right) down))))))))
+
+(def replace "Replaces the node at this loc, without moving" change)
+(defn remove
+  "Remove the node at loc, returning the loc that would have preceded it in a depth-first walk."
+  [loc]
+  (slew (delete loc) (prev loc)))
+(def insert-child "Insert the item as the leftmost child of the node at this loc, without moving" (comp up insert-down))
+(def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))
+
+(def node tree)
+(def children branches)
+(def make-node seed)
+
 (defn zipper
   "Creates a new zipper structure.
 
@@ -184,44 +220,3 @@
   "Return a zipper for xml elements (as from xml/parse), given a root element"
   (let [section (fn [tree children'] (assoc tree :content (and children' (apply vector children'))))]
     (partial zipper (partial instance? clojure.lang.IPersistentMap) :content section)))
-
-(defn- iteratively [n f]
-  "Return a function that composes n applications of f"
-  (fn [x] (loop [i n x x]
-            (if (zero? i) x (recur (dec i) (f x))))))
-
-(defn- slew
-  "Slew the first loc to the DFS position of the second, presuming loc1's DFS predecessors have not been changed in loc0's tree"
-  ;; When loc0 and loc1 have the same parent and common elder siblings they are, by this definition, in the same position.
-  ;; NB: this condition will not hold if either loc has zip-propogated independent changes up to a shared ancestor.
-  ;; The intent of this operation is to "pull" loc0 to a DFS predecessor in its tree, dragging along any zipped changes loc0 may embody.
-  ;; To prevent independent changes from being zipped into a parent (and changing their identity), the strategy is to move both locs up
-  ;; until they have identical parents and then move loc0 back through the recorded path of show loc1 arrived at the common ancestor.
-  [loc0 loc1]
-  (loop [loc0 loc0 loc1 loc1 s identity]
-    (let [[lefts0 parent0 _]  (:p loc0)
-          [lefts1 parent1 _]  (:p loc1)
-          ls1 (count lefts1)]
-      (if (= parent0 parent1)
-        (if (= lefts0 lefts1)
-          (s loc0)  ; replay on loc0 how loc1 got here
-          (recur (leftmost loc0) (leftmost loc1) (comp s (iteratively ls1 right))))
-        (let [ds0 (count (:pts loc0))
-              ds1 (count (:pts loc1))
-              delta-d (- ds1 ds0)]
-          (cond
-            (pos? delta-d) (recur loc0 (up loc1) (comp s (iteratively ls1 right) down))
-            (neg? delta-d) (recur (up loc0) loc1 s)
-            true (recur (up loc0) (up loc1) (comp s (iteratively ls1 right) down))))))))
-
-(def replace "Replaces the node at this loc, without moving" change)
-(defn remove
-  "Remove the node at loc, returning the loc that would have preceded it in a depth-first walk."
-  [loc]
-  (slew (delete loc) (prev loc)))
-(def insert-child "Insert the item as the leftmost child of the node at this loc, without moving" (comp up insert-down))
-(def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))
-
-(def node tree)
-(def children branches)
-(def make-node seed)
