@@ -163,7 +163,7 @@
 (def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))
 
 (def node tree)
-(def children branches)
+(defn children [loc] (map tree (branches loc)))
 (def make-node seed)
 
 ;; https://insideclojure.org/2015/01/02/sequences/

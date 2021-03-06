@@ -13,7 +13,6 @@
   (let [t '(1 (21 22) 3)
         z (list-zip t)]
     (is (= t (-> z tree)))
-    (is (= t (-> z branches)))
     (is (= 1 (-> z down tree)))
     (is (= '(21 22) (-> z down right tree)))
     (is (= 1 (-> z down right left tree)))

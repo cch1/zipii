@@ -13,7 +13,7 @@
   (tree [this] (seed treeish (map zipper/tree trees)))
   (branch? [_] true)
   (branches [_] trees)
-  (seed [_ bs] (let [t (seed treeish (map zipper/tree bs))] (Section. (branches t) t branches seed)))
+  (seed [_ bs] (Section. bs treeish branches seed))
   Object
   (equals [this other] (and (= (type this) (type other))
                             (= [trees treeish branches seed]
@@ -29,21 +29,21 @@
 (defrecord Loc [t p pts ->treeish]
   zipper/TreeLike
   (tree [this] (zipper/tree t))
-  (branch? [this] (zipper/branch? t))
+  (branch? [this] (zipper/branches t))
   (branches [this] (zipper/branches t))
   zipper/Zipper
   (left [this] (let [[lefts up rights] p]
                  (when-let [[l & ls] (seq lefts)] ; fails for leftmost (thus top)
-                   (->Loc (->treeish l) [(or ls ()) up (cons t rights)] pts ->treeish))))
+                   (->Loc l [(or ls ()) up (cons t rights)] pts ->treeish))))
   (right [this] (let [[lefts up rights] p]
                   (when-let [[r & rs] (seq rights)] ; fails for rightmost (thus top)
-                    (->Loc (->treeish r) [(cons t lefts) up (or rs ())] pts ->treeish))))
+                    (->Loc r [(cons t lefts) up (or rs ())] pts ->treeish))))
   (up [this] (when (not= top p)
                (let [[lefts up rights] p
                      t (zipper/seed (peek pts) (concat (reverse lefts) (cons t rights)))]
                  (->Loc t up (pop pts) ->treeish))))
   (down [this] (when-let [[t1 & trees] (seq (zipper/branches t))]
-                 (->Loc (->treeish t1) [() p (or trees ())] (conj pts t) ->treeish)))
+                 (->Loc t1 [() p (or trees ())] (conj pts t) ->treeish)))
   (change [this t'] (->Loc (->treeish t') p pts ->treeish))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts up rights] p
@@ -67,9 +67,9 @@
                        true (->Loc (zipper/seed (peek pts) ()) up (pop pts) ->treeish)))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
-(defn make->treeish [branches* seed*] (fn [t] (if-let [branches (branches* t)]
-                                                (->Section branches t branches* seed*)
-                                                t)))
+(defn make->treeish [branches* seed*] (fn ->treeish [t] (if-let [branches (branches* t)]
+                                                          (->Section (map ->treeish branches) t branches* seed*)
+                                                          t)))
 
 (defn zipper
   "Creates a new zipper structure.

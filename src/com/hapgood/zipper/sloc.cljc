@@ -30,17 +30,17 @@
   zipper/Zipper
   (left [this] (let [[lefts p' rights] p]
                  (when-let [[l & ls] (seq lefts)] ; fails for leftmost (thus top)
-                   (->SLoc (->treeish l) [(or ls ()) p' (cons t rights)] pts ->treeish))))
+                   (->SLoc l [(or ls ()) p' (cons t rights)] pts ->treeish))))
   (right [this] (let [[lefts p' rights] p]
                   (when-let [[r & rs] (seq rights)] ; fails for rightmost (thus top)
-                    (->SLoc (->treeish r) [(cons t lefts) p' (or rs ())] pts ->treeish))))
+                    (->SLoc r [(cons t lefts) p' (or rs ())] pts ->treeish))))
   (up [this] (when (not= top p)
                (let [[lefts p' rights] p
                      t (zipper/seed (peek pts) lefts t rights)] ; this is O(1)
                  (->SLoc t p' (pop pts) ->treeish))))
   (down [this] (when (seq (zipper/branches t))
                  (let [[lmts mt rmts :as s] t]
-                   (->SLoc (->treeish mt) [lmts p rmts] (conj pts t) ->treeish))))
+                   (->SLoc mt [lmts p rmts] (conj pts t) ->treeish))))
   (change [this t] (->SLoc (->treeish t) p pts ->treeish))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts p' rights] p
@@ -68,10 +68,11 @@
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
 ;; TODO: unify branch? and branches
-(defn- make->treeish [branches* seed*] (comp (fn [t] (if-let [[c & cs] (seq (zipper/branches t))]
-                                                       (->Siblings () c (or cs ()) t)
-                                                       t))
-                                             (loc/make->treeish branches* seed*)))
+(defn- make->treeish [branches* seed*] (let [->loc-treeish (loc/make->treeish branches* seed*)]
+                                         (fn ->treeish [t] (let [t (->loc-treeish t)] ; recursive, but lazy
+                                                             (if-let [[c & cs] (seq (zipper/branches t))]
+                                                               (->Siblings () c (map ->treeish cs) t)
+                                                               t)))))
 
 (defn zipper
   "Creates a new zipper structure.
