@@ -40,7 +40,7 @@
                  (->SLoc t p' (pop pts) ->treeish))))
   (down [this] (when (seq (zipper/branches t))
                  (let [[lmts mt rmts :as s] t]
-                   (->SLoc mt [lmts p rmts] (conj pts t) ->treeish))))
+                   (->SLoc (->treeish mt) [lmts p rmts] (conj pts t) ->treeish))))
   (change [this t] (->SLoc (->treeish t) p pts ->treeish))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts p' rights] p

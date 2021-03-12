@@ -90,7 +90,25 @@
     (is (= (-> t list-zip down right right (change 0) up tree)
            (-> t list-zip down right right (change 0) left up tree)))))
 
-(deftest edge-cases
+(deftest nil-elements
   (let [t '(nil nil nil '(nil nil))
         z (list-zip t)]
     (is (= t (-> z down right left up tree)))))
+
+(deftest spontaneous-generation
+  (let [t 1]
+    (is (= '(1) (-> t list-zip (change ()) (insert-down 1) up tree)))))
+
+(deftest infinitely-deep-tree
+  (is (let [t ((fn lazy-tree [] (lazy-seq (list (lazy-tree)))))
+            zip (fn [root] (zipper #(when (seq? %) %) (fn [t bs] bs) root))
+            fut (future (do (-> t zip down down down up up up tree) true))]
+        (try (deref fut 500 nil)
+             (finally (future-cancel fut))))))
+
+(deftest infinitely-wide-tree
+  (is (let [t (range)
+            zip (fn [root] (zipper #(when (seq? %) %) (fn [t bs] bs) root))
+            fut (future (do (-> t zip down right left up tree) true))]
+        (try (deref fut 500 nil)
+             (finally (future-cancel fut))))))
