@@ -7,8 +7,6 @@
 ;; 3. Without the complexity of scars, performance is likely to suffer when movement is more vertical.
 
 (deftype Section [trees treeish branches seed]
-  clojure.lang.Indexed
-  (nth [this n] (nth trees n))
   zipper/TreeLike
   (tree [this] (seed treeish (map zipper/tree trees)))
   (branch? [_] true)
