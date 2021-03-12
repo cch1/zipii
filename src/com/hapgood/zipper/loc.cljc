@@ -29,7 +29,7 @@
 (defrecord Loc [t p pts ->treeish]
   zipper/TreeLike
   (tree [this] (zipper/tree t))
-  (branch? [this] (zipper/branches t))
+  (branch? [this] (zipper/branch? t))
   (branches [this] (zipper/branches t))
   zipper/Zipper
   (left [this] (let [[lefts up rights] p]
