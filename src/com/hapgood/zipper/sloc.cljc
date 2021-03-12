@@ -14,8 +14,6 @@
   (seed [_ ls mt rs] (Siblings. ls mt rs treeish))
   (seed [_ branches] (zipper/seed treeish branches)))
 
-(defmethod print-method Siblings [s w] (let [[l m r] s] (.write w "-<") (.write w (str (vector l m r))) (.write w ">-")))
-
 (defn- section->siblings [section item] (->Siblings () item (zipper/branches section) section))
 
 (def ^:private top
@@ -87,3 +85,19 @@
     (->SLoc (->treeish root) top [] ->treeish)))
 
 (defn loc? [obj] (instance? SLoc obj))
+
+(defmethod print-dup Siblings [s w] (print-ctor s (fn [s w] (print-dup (.-treeish s) w)) w))
+(defmethod print-method Siblings [s w] (do (.write w "Siblings[")
+                                           (print-method (.-lefts s) w)
+                                           (.write w " ")
+                                           (print-method (.-mtree s) w)
+                                           (.write w " ")
+                                           (print-method (.-rights s) w)
+                                           (.write w "]")))
+
+(defmethod print-dup SLoc [l w] (print-ctor l (fn [s w] (print-dup (.-t l) w) (print-dup (.-p l) w)) w))
+(defmethod print-method SLoc [l w] (do (.write w "SLoc(")
+                                       (print-method (.-t l) w)
+                                       (.write w ", ")
+                                       (print-method (.-p l) w)
+                                       (.write w ")")))

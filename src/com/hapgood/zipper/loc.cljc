@@ -18,8 +18,6 @@
                             (= [t seed] [(.-t other) (.-seed other)])))
   (hashCode [this] (.hashCode [trees t seed])))
 
-(defmethod print-method Section [s w] (.write w "<") (.write w (str (zipper/branches s))) (.write w ">"))
-
 (def top
   "A sentinel value representing the path of the tree at the top of a zipper"
   [() nil ()])
@@ -82,3 +80,15 @@
     (->Loc (->treeish root) top [] ->treeish)))
 
 (defn loc? [obj] (instance? Loc obj))
+
+(defmethod print-dup Section [s w] (print-ctor s (fn [s w] (print-dup (.-treeish s) w)) w))
+(defmethod print-method Section [s w] (do (.write w "Section[")
+                                          (print-method (.-trees s) w)
+                                          (.write w "]")))
+
+(defmethod print-dup Loc [l w] (print-ctor l (fn [s w] (print-dup (.-t l) w) (print-dup (.-p l) w)) w))
+(defmethod print-method Loc [l w] (do (.write w "Loc(")
+                                      (print-method (.-t l) w)
+                                      (.write w ", ")
+                                      (print-method (.-p l) w)
+                                      (.write w ")")))
