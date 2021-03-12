@@ -6,17 +6,17 @@
 ;; 2. The implementation does not provide much detail on error conditions/failures and their translation in Clojure.  Here I have leveraged Clojure's `ex-info` to provide clear feedback for exceptions.  I have also adopted Hickey's approach of returning falsey for some failures that are not considered exceptions.
 ;; 3. Without the complexity of scars, performance is likely to suffer when movement is more vertical.
 
-(deftype Section [trees treeish branches seed]
+(deftype Section [trees t seed]
   zipper/TreeLike
-  (tree [this] (seed treeish (map zipper/tree trees)))
+  (tree [this] t)
   (branch? [_] true)
-  (branches [_] trees)
-  (seed [_ bs] (Section. bs treeish branches seed))
+  (branches [_] trees) ; return the cached value
+  (seed [_ bs] (let [t (seed t (map zipper/tree bs))]
+                 (Section. bs t seed)))
   Object
   (equals [this other] (and (= (type this) (type other))
-                            (= [trees treeish branches seed]
-                               [(.-trees other) (.-treeish other) (.-branches other) (.-seed other)])))
-  (hashCode [this] (.hashCode [trees treeish branches seed])))
+                            (= [t seed] [(.-t other) (.-seed other)])))
+  (hashCode [this] (.hashCode [trees t seed])))
 
 (defmethod print-method Section [s w] (.write w "<") (.write w (str (zipper/branches s))) (.write w ">"))
 
@@ -66,7 +66,7 @@
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
 (defn make->treeish [branches* seed*] (fn ->treeish [t] (if-let [branches (branches* t)]
-                                                          (->Section (map ->treeish branches) t branches* seed*)
+                                                          (->Section (map ->treeish branches) t seed*)
                                                           t)))
 
 (defn zipper
