@@ -16,7 +16,7 @@
   (tree [this] "Return the pure treeish data structure")
   (branch? [this] "Can this tree-like have branches?")
   (branches [this] "Return a seq of the child branches of this tree-like, or nil if it is not a branch")
-  (seed [this branches] [this lefts treeish rights] "Return a new tree-like with the same treeish genesis but with the supplied branches"))
+  (seed [this branches] "Return a new tree-like with the same treeish genesis but with the supplied branches"))
 
 (extend-protocol TreeLike
   nil

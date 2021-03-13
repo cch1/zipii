@@ -82,6 +82,13 @@
 #_ (deftest nth-child-porcelain
      (is (= 4 (-> (apply list (range 100)) list-zip (nth-child 5) tree))))
 
+(deftest return-down-via-scar
+  (is (= 3 (-> '(1 2 3 4) list-zip down right right up down tree))))
+
+(deftest insert-down-via-scar
+  (is (= '(0 1 2 3 4 5)
+         (-> '(0 1 4) list-zip down right right up (insert-down 2) right (insert-right 5) (insert-left 3) up tree))))
+
 ;; Edge case exploration
 (deftest move-and-edit
   (let [t '(1 1 3 (4 5))]

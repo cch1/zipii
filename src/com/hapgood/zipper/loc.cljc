@@ -11,8 +11,7 @@
   (tree [this] t)
   (branch? [_] true)
   (branches [_] trees) ; return the cached value
-  (seed [_ bs] (let [t (seed t (map zipper/tree bs))]
-                 (Section. bs t seed)))
+  (seed [_ bs] (seed t (map zipper/tree bs)))
   Object
   (equals [this other] (and (= (type this) (type other))
                             (= [t seed] [(.-t other) (.-seed other)])))
@@ -36,7 +35,7 @@
                     (->Loc r [(cons t lefts) up (or rs ())] pts ->treeish))))
   (up [this] (when (not= top p)
                (let [[lefts up rights] p
-                     t (zipper/seed (peek pts) (concat (reverse lefts) (cons t rights)))]
+                     t (->treeish (zipper/seed (peek pts) (concat (reverse lefts) (cons t rights))))]
                  (->Loc t up (pop pts) ->treeish))))
   (down [this] (when-let [[t1 & trees] (seq (zipper/branches t))]
                  (->Loc t1 [() p (or trees ())] (conj pts t) ->treeish)))
@@ -60,7 +59,7 @@
                      (cond
                        r (->Loc r [lefts up (or rs ())] pts ->treeish)
                        l (->Loc l [(or ls ()) up rights] pts ->treeish)
-                       true (->Loc (zipper/seed (peek pts) ()) up (pop pts) ->treeish)))
+                       true (->Loc (->treeish (zipper/seed (peek pts) ())) up (pop pts) ->treeish)))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
 (defn make->treeish [branches* seed*] (fn ->treeish [t] (if-let [branches (branches* t)]

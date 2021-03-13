@@ -2,19 +2,18 @@
   (:require [com.hapgood.zipper :as zipper]
             [com.hapgood.zipper.loc :as loc]))
 
-;;; ScarLoc
 (deftype Siblings [lefts mtree rights treeish]
   clojure.lang.Indexed ; to allow basic sequential destructuring
   (nth [this n] (vector (nth [lefts mtree rights] n)))
   (nth [this n default] (nth [lefts mtree rights] n default))
   zipper/TreeLike
-  (tree [_] (zipper/tree (zipper/seed treeish (map zipper/tree (concat (reverse lefts) [mtree] rights)))))
+  (tree [_] (zipper/tree treeish))
   (branch? [_] true)
-  (branches [_] (concat lefts [mtree] rights))
-  (seed [_ ls mt rs] (Siblings. ls mt rs treeish))
-  (seed [_ branches] (zipper/seed treeish branches)))
-
-(defn- section->siblings [section item] (->Siblings () item (zipper/branches section) section))
+  (branches [_] (zipper/branches treeish))
+  (seed [_ branches] (zipper/seed treeish (map zipper/tree branches)))
+  Object
+  (equals [this other] (and (= (type this) (type other)) (= treeish (.-treeish other))))
+  (hashCode [_] (.hashCode [lefts mtree rights treeish])))
 
 (def ^:private top
   "A sentinel value representing the path of the tree at the top of a zipper"
@@ -34,11 +33,13 @@
                     (->SLoc r [(cons t lefts) p' (or rs ())] pts ->treeish))))
   (up [this] (when (not= top p)
                (let [[lefts p' rights] p
-                     t (zipper/seed (peek pts) lefts t rights)] ; this is O(1)
-                 (->SLoc t p' (pop pts) ->treeish))))
-  (down [this] (when (seq (zipper/branches t))
-                 (let [[lmts mt rmts :as s] t]
-                   (->SLoc (->treeish mt) [lmts p rmts] (conj pts t) ->treeish))))
+                     t' (->Siblings lefts t rights (->treeish (zipper/seed (peek pts) (concat (reverse lefts) [t] rights))))]
+                 (->SLoc t' p' (pop pts) ->treeish))))
+  (down [this] (when-let [[lmts mt rmts] (if (instance? Siblings t)
+                                           t
+                                           (when-let [[c & cs] (seq (zipper/branches t))]
+                                             [() c (or cs ())]))]
+                 (->SLoc mt [lmts p rmts] (conj pts t) ->treeish)))
   (change [this t] (->SLoc (->treeish t) p pts ->treeish))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts p' rights] p
@@ -50,27 +51,20 @@
                                  node [lefts p' (cons (->treeish r) rights)]]
                              (->SLoc t node pts ->treeish))
                            (throw (ex-info "Can't insert right of top" {:loc this :t t}))))
-  (insert-down [this t1] (if-let [sons (zipper/branches t)] ; branch?
-                           (let [[rights t'] (if-let [sons (seq sons)] ; not empty?/memo tree instead of section?
-                                               [sons t]
-                                               [() (section->siblings t t1)])
-                                 node [() p rights]]
-                             (->SLoc (->treeish t1) node (conj pts t') ->treeish))
-                           (throw (ex-info "Can only insert down from a branch" {:loc this :t t}))))
+  (insert-down [this t1] (if (instance? Siblings t)
+                           (-> this zipper/down (zipper/insert-left t1) zipper/left)
+                           (if-let [cs (zipper/branches t)]
+                             (let [p' [() p cs]]
+                               (->SLoc (->treeish t1) p' (conj pts t) ->treeish))
+                             (throw (ex-info "Can only insert down from a branch" {:loc this :t t})))))
   (delete [this] (if (not= top p)
                    (let [[[l & ls :as lefts] parent [r & rs :as rights]] p]
                      (cond
                        r (->SLoc r [lefts parent (or rs ())] pts ->treeish)
                        l (->SLoc l [(or ls ()) parent rights] pts ->treeish)
-                       true (->SLoc (zipper/seed (peek pts) ()) parent (pop pts) ->treeish)))
+                       ;; Re-cast the Siblings as a mere Section
+                       true (->SLoc (->treeish (zipper/seed (peek pts) ())) parent (pop pts) ->treeish)))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
-
-;; TODO: unify branch? and branches
-(defn- make->treeish [branches* seed*] (let [->loc-treeish (loc/make->treeish branches* seed*)]
-                                         (fn ->treeish [t] (let [t (->loc-treeish t)] ; recursive, but lazy
-                                                             (if-let [[c & cs] (seq (zipper/branches t))]
-                                                               (->Siblings () c (map ->treeish cs) t)
-                                                               t)))))
 
 (defn zipper
   "Creates a new zipper structure.
@@ -81,7 +75,7 @@
 
   `root` is the root of the tree."
   [branches seed root]
-  (let [->treeish (make->treeish branches seed)]
+  (let [->treeish (loc/make->treeish branches seed)]
     (->SLoc (->treeish root) top [] ->treeish)))
 
 (defn loc? [obj] (instance? SLoc obj))
