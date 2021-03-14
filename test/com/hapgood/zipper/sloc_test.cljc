@@ -79,9 +79,6 @@
                    item (-> z tree)]
                (-> z delete (insert-down item) up tree))))))
 
-#_ (deftest nth-child-porcelain
-     (is (= 4 (-> (apply list (range 100)) list-zip (nth-child 5) tree))))
-
 (deftest return-down-via-scar
   (is (= 3 (-> '(1 2 3 4) list-zip down right right up down tree))))
 

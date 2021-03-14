@@ -31,6 +31,6 @@
   (seed [this _] (throw (ex-info "Leaf objects cannot seed a new tree" {:obj this}))))
 
 (defn nth-child [loc n] (cond
-                          (zero? n) (throw (ex-info "Children are identified by positive integers allowed" {:loc loc :n n}))
+                          (zero? n) (throw (ex-info "Only positive integers allowed to identify the nth child." {:loc loc :n n}))
                           (= 1 n) (down loc)
                           true (right (nth-child loc (dec n)))))
