@@ -3,9 +3,9 @@
             [com.hapgood.zipper.loc :as loc]))
 
 (deftype Siblings [lefts mtree rights treeish]
-  clojure.lang.Indexed ; to allow basic sequential destructuring
-  (nth [this n] (vector (nth [lefts mtree rights] n)))
-  (nth [this n default] (nth [lefts mtree rights] n default))
+  clojure.lang.Sequential ; just a marker...
+  clojure.lang.ISeq ; ...to allow sequential destructuring
+  (seq [this] (list lefts mtree rights))
   zipper/TreeLike
   (tree [_] (zipper/tree treeish))
   (branch? [_] true)
