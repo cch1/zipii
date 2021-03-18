@@ -23,10 +23,7 @@
 (def insert-right z/insert-right)
 (def insert-down z/insert-down)
 (def delete z/delete)
-(def tree z/tree)
 (def branch? z/branch?)
-(def branches z/branches)
-(def seed z/seed)
 
 (def nth-child z/nth-child)
 
@@ -61,15 +58,15 @@
 (defn root
   "Zip all the way up and return the loc of the root, reflecting any changes."
   [loc]
-  (tree (or (end? loc)
-            (loop [loc loc]
-              (if-let [loc' (up loc)] (recur loc') loc)))))
+  (z/tree (or (end? loc)
+              (loop [loc loc]
+                (if-let [loc' (up loc)] (recur loc') loc)))))
 
 (defn path
   "Return a seq of trees leading to this loc"
   [loc]
   (if-let [ploc (up loc)]
-    (conj (path ploc) (tree ploc))
+    (conj (path ploc) (z/tree ploc))
     []))
 
 (defn rightmost
@@ -115,7 +112,7 @@
 (defn edit
   "Replace the tree at this loc with the value of (f tree args)"
   [loc f & args]
-  (change loc (apply f (tree loc) args)))
+  (change loc (apply f (z/tree loc) args)))
 
 (defn append-down
   "Inserts the item as the rightmost child of the tree at this loc"
@@ -162,9 +159,9 @@
 (def insert-child "Insert the item as the leftmost child of the node at this loc, without moving" (comp up insert-down))
 (def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))
 
-(def node tree)
-(defn children [loc] (map tree (branches loc)))
-(def make-node seed)
+(def node z/tree)
+(defn children [loc] (map z/tree (z/branches loc)))
+(def make-node z/seed)
 
 ;; https://insideclojure.org/2015/01/02/sequences/
 (defn zipper
@@ -172,14 +169,14 @@
 
   `branch?` is a predicate fn that returns true if the given (sub)tree can have child branches.
 
-  `branches` is a fn that, given a (sub)tree, returns a possibly empty sequence of its subtrees, or nil if it is not a branch.
+  `children` is a fn that, given a (sub)tree, returns a possibly empty sequence of its subtrees, or nil if it is not a branch.
 
-  `seed` is a constructor fn that, given a (sub)tree and a seq of branches, returns a new (sub)tree having the supplied child branches.
+  `make-node` is a constructor fn that, given a (sub)tree and a seq of branches, returns a new (sub)tree having the supplied child branches.
 
   `root` is the root of the tree."
-  [branch? branches seed root]
-  (let [branches (fn [t] (when (branch? t) (branches t)))]
-    (loc/zipper branches seed root)))
+  [branch? children make-node root]
+  (let [branches (fn [t] (when (branch? t) (children t)))]
+    (loc/zipper branches make-node root)))
 
 (defn- fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
 
