@@ -1,5 +1,6 @@
 (ns com.hapgood.zipper.sloc-test
   (:require [com.hapgood.zipper.sloc :refer :all]
+            [com.hapgood.zipper.section :refer [make->treeish]]
             [com.hapgood.zipper :refer [up down left right insert-left insert-right insert-down change delete nth-child
                                         tree branch? branches]]
             [clojure.test :refer [deftest is are]])
@@ -7,7 +8,7 @@
 
 (def list-zip
   "Return a zipper for nested lists, given a root list"
-  (partial zipper (fn [t] (when (list? t) t)) (comp reverse (fn [tree children] (into (empty tree) children)))))
+  (partial zipper (make->treeish (fn [t] (when (list? t) t)) (comp reverse (fn [tree children] (into (empty tree) children))))))
 
 (deftest access-move-query
   (let [t '(1 (21 22) 3)
@@ -105,14 +106,14 @@
 
 (deftest infinitely-deep-tree
   (is (let [t ((fn lazy-tree [] (lazy-seq (list (lazy-tree)))))
-            zip (fn [root] (zipper #(when (seq? %) %) (fn [t bs] bs) root))
+            zip (fn [root] (zipper (make->treeish #(when (seq? %) %) (fn [t bs] bs)) root))
             fut (future (do (-> t zip down down down up up up tree) true))]
         (try (deref fut 500 nil)
              (finally (future-cancel fut))))))
 
 (deftest infinitely-wide-tree
   (is (let [t (range)
-            zip (fn [root] (zipper #(when (seq? %) %) (fn [t bs] bs) root))
+            zip (fn [root] (zipper (make->treeish #(when (seq? %) %) (fn [t bs] bs)) root))
             fut (future (do (-> t zip down right left up tree) true))]
         (try (deref fut 500 nil)
              (finally (future-cancel fut))))))

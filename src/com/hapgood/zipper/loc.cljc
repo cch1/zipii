@@ -6,17 +6,6 @@
 ;; 2. The implementation does not provide much detail on error conditions/failures and their translation in Clojure.  Here I have leveraged Clojure's `ex-info` to provide clear feedback for exceptions.  I have also adopted Hickey's approach of returning falsey for some failures that are not considered exceptions.
 ;; 3. Without the complexity of scars, performance is likely to suffer when movement is more vertical.
 
-(deftype Section [trees t seed]
-  zipper/TreeLike
-  (tree [this] t)
-  (branch? [_] true)
-  (branches [_] trees) ; return the cached value
-  (seed [_ bs] (seed t (map zipper/tree bs)))
-  Object
-  (equals [this other] (and (= (type this) (type other))
-                            (= [t seed] [(.-t other) (.-seed other)])))
-  (hashCode [this] (.hashCode [trees t seed])))
-
 (def top
   "A sentinel value representing the path of the tree at the top of a zipper"
   [() nil ()])
@@ -62,30 +51,19 @@
                        true (->Loc (->treeish (zipper/seed (peek pts) ())) up (pop pts) ->treeish)))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
-(defn make->treeish [branches* seed*] (fn ->treeish [t] (if-let [branches (branches* t)]
-                                                          (->Section (map ->treeish branches) t seed*)
-                                                          t)))
-
 (defn zipper
   "Creates a new zipper structure.
 
-  `branches` is a fn that, given a (sub)tree, returns a possibly empty sequence of its subtrees, or nil if it is not a branch.
-
-  `seed` is a constructor fn that, given a (sub)tree and a seq of branches, returns a new (sub)tree having the supplied child branches.
+  `->treeish` is a fn that, given a (sub)tree, returns a zipper/TreeLike if it is a branch or nil if it is not a branch.
 
   `root` is the root of the tree."
-  [branches seed root]
-  (let [->treeish (make->treeish branches seed)]
-    (->Loc (->treeish root) top [] ->treeish)))
+  [->treeish root]
+  (->Loc (->treeish root) top [] ->treeish))
 
 (defn loc? [obj] (instance? Loc obj))
 
-(defmethod print-dup Section [s w] (print-ctor s (fn [s w] (print-dup (.-treeish s) w)) w))
-(defmethod print-method Section [s w] (do (.write w "Section[")
-                                          (print-method (.-trees s) w)
-                                          (.write w "]")))
-
 (defmethod print-dup Loc [l w] (print-ctor l (fn [s w] (print-dup (.-t l) w) (print-dup (.-p l) w)) w))
+
 (defmethod print-method Loc [l w] (do (.write w "Loc(")
                                       (print-method (.-t l) w)
                                       (.write w ", ")

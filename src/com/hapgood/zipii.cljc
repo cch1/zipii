@@ -1,6 +1,7 @@
 (ns com.hapgood.zipii
   (:refer-clojure :exclude (replace remove next))
   (:require [com.hapgood.zipper.loc :as loc]
+            [com.hapgood.zipper.section :refer [make->treeish]]
             [com.hapgood.zipper :as z]))
 
 ;; Reference: https://www.st.cs.uni-saarland.de//edu/seminare/2005/advanced-fp/docs/huet-zipper.pdf
@@ -175,8 +176,8 @@
 
   `root` is the root of the tree."
   [branch? children make-node root]
-  (let [branches (fn [t] (when (branch? t) (children t)))]
-    (loc/zipper branches make-node root)))
+  (let [->treeish (make->treeish (fn [t] (when (branch? t) (children t))) make-node)]
+    (loc/zipper ->treeish root)))
 
 (defn- fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
 

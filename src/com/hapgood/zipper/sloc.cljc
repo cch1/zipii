@@ -1,5 +1,6 @@
 (ns com.hapgood.zipper.sloc
   (:require [com.hapgood.zipper :as zipper]
+            [com.hapgood.zipper.section :as section]
             [com.hapgood.zipper.loc :as loc]))
 
 (deftype Siblings [lefts mtree rights t]
@@ -69,14 +70,11 @@
 (defn zipper
   "Creates a new zipper structure.
 
-  `branches` is a fn that, given a (sub)tree, returns a possibly empty sequence of its subtrees, or nil if it is not a branch.
-
-  `seed` is a constructor fn that, given a (sub)tree and a seq of branches, returns a new (sub)tree having the supplied child branches.
+  `->treeish` is a fn that, given a (sub)tree, returns a zipper/TreeLike if it is a branch or nil if it is not a branch.
 
   `root` is the root of the tree."
-  [branches seed root]
-  (let [->treeish (loc/make->treeish branches seed)]
-    (->Loc (->treeish root) top [] ->treeish)))
+  [->treeish root]
+  (->Loc (->treeish root) top [] ->treeish))
 
 (defn loc? [obj] (instance? Loc obj))
 
