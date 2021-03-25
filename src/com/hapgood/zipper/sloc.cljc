@@ -1,16 +1,9 @@
 (ns com.hapgood.zipper.sloc
   (:require [com.hapgood.zipper :as zipper]))
 
-(deftype Siblings [lefts mtree rights z]
-  clojure.lang.Sequential ; just a marker...
-  clojure.lang.ISeq ; ...to allow sequential destructuring
-  (seq [this] (list lefts mtree rights))
-  (first [this] lefts)
+(defrecord Siblings [lefts t rights z]
   zipper/Treeish
-  (tree [this] (first (zipper/z-up z (map zipper/tree (concat (reverse lefts) [mtree] rights)))))
-  Object
-  (equals [this other] (and (= (type this) (type other)) (= [lefts mtree rights] [(.-lefts other) (.-mtree other) (.-rights other)])))
-  (hashCode [_] (.hashCode [lefts mtree rights])))
+  (tree [this] (first (zipper/z-up z (map zipper/tree (concat (reverse lefts) [t] rights))))))
 
 (def ^:private top
   "A sentinel value representing the path of the tree at the top of a zipper"
@@ -31,7 +24,7 @@
                (let [[lefts p' rights] p]
                  (->Loc (->Siblings lefts t rights z) p' z))))
   (down [this] (if (instance? Siblings t)
-                 (let [[lmts mt rmts] t]
+                 (let [[lmts mt rmts] ((juxt :lefts :t :rights) t)]
                    (->Loc mt [lmts p rmts] z))
                  (when-let [[t' z'] (zipper/z-dn z t)]
                    (when-let [[c & cs] (seq t')]
