@@ -1,7 +1,7 @@
 (ns com.hapgood.zipii
   (:refer-clojure :exclude (replace remove next))
   (:require [com.hapgood.zipper.loc :as loc]
-            [com.hapgood.zipper.section :refer [make->treeish]]
+            [com.hapgood.zipper.pivot :as pivot]
             [com.hapgood.zipper :as z]))
 
 ;; Reference: https://www.st.cs.uni-saarland.de//edu/seminare/2005/advanced-fp/docs/huet-zipper.pdf
@@ -14,6 +14,7 @@
 ;; 6. The `changed?` attribute increases performance relative to the base Huet implementation (in which the tree is reconstituted when zipping up regardless of changes) when movement is more vertical, but at the expense of complexity.  I will explore scars for this purpose at some later time.
 ;; 7. The vocabulary diverges from Huet and while Hickey's seems more reasonable, the Huet paper is an excellent implementation guide and sticking to his vocabulary reinforces that effect.
 ;; 8. Exceptions are not very precise nor are they data-laden.
+;; 9. Zippers are not serializable.
 
 (def left z/left)
 (def right z/right)
@@ -24,7 +25,6 @@
 (def insert-right z/insert-right)
 (def insert-down z/insert-down)
 (def delete z/delete)
-(def branch? z/branch?)
 
 (def nth-child z/nth-child)
 
@@ -36,11 +36,9 @@
   [loc]
   (let [throw! (fn [](throw (ex-info "Operation not allowed on end loc" {::root loc})))]
     ^{::end loc} (reify
-                   z/TreeLike
+                   z/Treeish
                    (tree [loc] (throw!))
-                   (branch? [loc] (throw!))
                    (branches [loc] (throw!))
-                   (seed [loc branches] (throw!))
                    z/Zipper
                    (left [loc] (throw!))
                    (right [loc] (throw!))
@@ -128,6 +126,10 @@
   (fn [x] (loop [i n x x]
             (if (zero? i) x (recur (dec i) (f x))))))
 
+(defn depth [loc]
+  (when loc (loop [[_ p _] (:p loc) i 0]
+              (if p (recur p (inc i)) i))))
+
 (defn- slew
   "Slew the first loc to the DFS position of the second, presuming loc1's DFS predecessors have not been changed in loc0's tree"
   ;; When loc0 and loc1 have the same parent and common elder siblings they are, by this definition, in the same position.
@@ -144,8 +146,8 @@
         (if (= lefts0 lefts1)
           (s loc0)  ; replay on loc0 how loc1 got here
           (recur (leftmost loc0) (leftmost loc1) (comp s (iteratively ls1 right))))
-        (let [ds0 (count (:pts loc0))
-              ds1 (count (:pts loc1))
+        (let [ds0 (depth loc0)
+              ds1 (depth loc1)
               delta-d (- ds1 ds0)]
           (cond
             (pos? delta-d) (recur loc0 (up loc1) (comp s (iteratively ls1 right) down))
@@ -161,8 +163,18 @@
 (def append-child "Insert the item as the rightmost child of the node at this loc, without moving" (comp up append-down))
 
 (def node z/tree)
-(defn children [loc] (map z/tree (z/branches loc)))
-(def make-node z/seed)
+(defn branch? [loc] (z/branches loc))
+(defn children [loc] (if-let [children (z/branches loc)]
+                       children
+                       (throw (throw (ex-info "Called children on a leaf node" {::loc loc})))))
+
+(defrecord GeneralZip [branch? children make-node material]
+  z/Zip
+  (z-dn [_ t] (when (branch? t) [(children t) (GeneralZip. branch? children make-node (conj material t))]))
+  (z-dn [_ t k] (when (branch? t)
+                  (when-let [[lefts t rights :as fulcrum] (pivot/pivot t k)]
+                    [fulcrum (GeneralZip. branch? children make-node (conj material t))])))
+  (z-up [_ branches] [(make-node (peek material) branches) (GeneralZip. branch? children make-node (pop material))]) )
 
 ;; https://insideclojure.org/2015/01/02/sequences/
 (defn zipper
@@ -176,8 +188,8 @@
 
   `root` is the root of the tree."
   [branch? children make-node root]
-  (let [->treeish (make->treeish (fn [t] (when (branch? t) (children t))) make-node)]
-    (loc/zipper ->treeish root)))
+  (let [z (->GeneralZip branch? children make-node [])]
+    (loc/zipper z root)))
 
 (defn- fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
 

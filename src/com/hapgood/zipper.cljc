@@ -12,24 +12,20 @@
   (insert-down [loc t] "Insert t as the leftmost child of the tree (which must be a branch) at this loc, moving to the newly inserted t.")
   (delete [loc] "Delete the tree at loc, returning the loc that would have preceded it in a depth-first walk."))
 
-(defprotocol TreeLike
+(defprotocol Treeish
   (tree [this] "Return the pure treeish data structure")
-  (branch? [this] "Can this tree-like have branches?")
-  ;; (= treelike (seed treelike (branches treelike)))
-  (branches [this] "Return a seq of the child tree-like branches of this tree-like, or nil if it is not a branch")
-  (seed [this branches] "Return a new tree-like with the same treeish genesis but with the supplied tree-like branches"))
+  (branches [this] "Return a seq of the child branches of this tree, or nil if it is a leaf (not a branch)"))
 
-(extend-protocol TreeLike
+(extend-protocol Treeish
   nil
   (tree [this] this)
-  (branch? [_] false)
-  (branches [this] nil)
-  (seed [this _] (throw (ex-info "Leaf objects cannot seed a new tree" {:obj this})))
   Object
-  (tree [this] this)
-  (branch? [_] false)
-  (branches [this] nil)
-  (seed [this _] (throw (ex-info "Leaf objects cannot seed a new tree" {:obj this}))))
+  (tree [this] this))
+
+(defprotocol Zip
+  "Perform up-and-down zip operations.  Like a stack, up is guaranteed to never be called without a preceeding dn"
+  (z-dn [this t] [this t k] "Return a pair of a seq of child branches and a possibly updated Zip, or nil if t is not a branch.")
+  (z-up [this branches] "Return a pair of a new tree with with the supplied branches and a possibly updated Zip"))
 
 (defn nth-child [loc n] (cond
                           (zero? n) (throw (ex-info "Only positive integers allowed to identify the nth child." {:loc loc :n n}))

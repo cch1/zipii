@@ -23,14 +23,8 @@
 
 (extend-protocol ChildrenByKey
   com.hapgood.zipper.loc.Loc
-  (down-to [this k] (when (zipper/branch? this)
-                      (when-let [[lefts pivot rights] (pivot (zipper/tree this) k)]
-                        (let [ptrees (conj (:pts this) (:t this))
-                              ->treeish (:->treeish this)]
-                          (loc/->Loc (->treeish pivot) [lefts (:p this) rights] ptrees ->treeish)))))
+  (down-to [this k] (when-let [[[lefts pivot rights] z] (zipper/z-dn (:z this) (:t this) k)]
+                      (loc/->Loc pivot [lefts (:p this) rights] z)))
   com.hapgood.zipper.sloc.Loc
-  (down-to [this k] (when (zipper/branch? this)
-                      (when-let [[lefts pivot rights] (pivot (zipper/tree this) k)]
-                        (let [ptrees (conj (:pts this) (:t this))
-                              ->treeish (:->treeish this)]
-                          (sloc/->Loc (->treeish pivot) [lefts (:p this) rights] ptrees ->treeish))))))
+  (down-to [this k] (when-let [[[lefts pivot rights] z] (zipper/z-dn (:z this) (:t this) k)]
+                      (loc/->Loc pivot [lefts (:p this) rights] z))))

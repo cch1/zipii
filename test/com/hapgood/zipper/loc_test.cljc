@@ -1,14 +1,16 @@
 (ns com.hapgood.zipper.loc-test
   (:require [com.hapgood.zipper.loc :refer :all]
-            [com.hapgood.zipper.section :refer :all]
-            [com.hapgood.zipper :refer [up down left right insert-left insert-right insert-down change delete nth-child
-                                        tree branch? branches]]
+            [com.hapgood.zipper :as zipper :refer [up down left right insert-left insert-right insert-down change delete nth-child
+                                                   tree branches]]
             [clojure.test :refer [deftest is are]])
   (:import (clojure.lang ExceptionInfo)))
 
-(def list-zip
-  "Return a zipper for nested lists, given a root list"
-  (partial zipper (make->treeish (fn [tree] (when (list? tree) tree)) (comp reverse (fn [tree children] (into (empty tree) children))))))
+(defrecord ListZip []
+  zipper/Zip
+  (z-dn [this t] (when (list? t) [t this] ))
+  (z-up [this branches] [(apply list branches) this]))
+
+(def list-zip (partial zipper (->ListZip)))
 
 (deftest access-move-query
   (let [t '(1 (21 22) 3)
@@ -100,16 +102,21 @@
   (let [t 1]
     (is (= '(1) (-> t list-zip (change ()) (insert-down 1) up tree)))))
 
+(defrecord SeqZip []
+  zipper/Zip
+  (z-dn [this t] (when (seq? t) [t this] ))
+  (z-up [this branches] [branches this]))
+
+(def seq-zip (partial zipper (->SeqZip)))
+
 (deftest infinitely-deep-tree
   (is (let [t ((fn lazy-tree [] (lazy-seq (list (lazy-tree)))))
-            zip (fn [root] (zipper (make->treeish #(when (seq? %) %) (fn [t bs] bs)) root))
-            fut (future (do (-> t zip down down down up up up tree) true))]
+            fut (future (do (-> t seq-zip down down down up up up tree) true))]
         (try (deref fut 500 nil)
              (finally (future-cancel fut))))))
 
 (deftest infinitely-wide-tree
   (is (let [t (range)
-            zip (fn [root] (zipper (make->treeish #(when (seq? %) %) (fn [t bs] bs)) root))
-            fut (future (do (-> t zip down right left up tree) true))]
+            fut (future (do (-> t seq-zip down right left up tree) true))]
         (try (deref fut 500 nil)
              (finally (future-cancel fut))))))

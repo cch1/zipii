@@ -10,62 +10,54 @@
   "A sentinel value representing the path of the tree at the top of a zipper"
   [() nil ()])
 
-(defrecord Loc [t p pts ->treeish]
-  zipper/TreeLike
-  (tree [this] (zipper/tree t))
-  (branch? [this] (zipper/branch? t))
-  (branches [this] (zipper/branches t))
+(defrecord Loc [t p z]
+  zipper/Treeish
+  (tree [this] t)
+  (branches [this] (first (zipper/z-dn z (zipper/tree this))))
   zipper/Zipper
   (left [this] (let [[lefts up rights] p]
                  (when-let [[l & ls] (seq lefts)] ; fails for leftmost (thus top)
-                   (->Loc l [(or ls ()) up (cons t rights)] pts ->treeish))))
+                   (->Loc l [(sequence ls) up (cons t rights)] z))))
   (right [this] (let [[lefts up rights] p]
                   (when-let [[r & rs] (seq rights)] ; fails for rightmost (thus top)
-                    (->Loc r [(cons t lefts) up (or rs ())] pts ->treeish))))
+                    (->Loc r [(cons t lefts) up (sequence rs)] z))))
   (up [this] (when (not= top p)
                (let [[lefts up rights] p
-                     t (->treeish (zipper/seed (peek pts) (concat (reverse lefts) (cons t rights))))]
-                 (->Loc t up (pop pts) ->treeish))))
-  (down [this] (when-let [[t1 & trees] (seq (zipper/branches t))]
-                 (->Loc t1 [() p (or trees ())] (conj pts t) ->treeish)))
-  (change [this t'] (->Loc (->treeish t') p pts ->treeish))
+                     [t z] (zipper/z-up z (concat (reverse lefts) (cons t rights)))]
+                 (->Loc t up z))))
+  (down [this] (when-let [[trees z] (zipper/z-dn z t)]
+                 (when-let [[t1 & trees] (seq trees)]
+                   (->Loc t1 [() p (sequence trees)] z))))
+  (change [this t'] (->Loc t' p z))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts up rights] p
-                                node [(cons (->treeish l) lefts) up rights]]
-                            (->Loc t node pts ->treeish))
+                                node [(cons l lefts) up rights]]
+                            (->Loc t node z))
                           (throw (ex-info "Can't insert left of top" {:loc this :t t}))))
   (insert-right [this r] (if (not= top p)
                            (let [[lefts up rights] p
-                                 node [lefts up (cons (->treeish r) rights)]]
-                             (->Loc t node pts ->treeish))
+                                 node [lefts up (cons r rights)]]
+                             (->Loc t node z))
                            (throw (ex-info "Can't insert right of top" {:loc this :t t}))))
-  (insert-down [this t1] (if-let [sons (zipper/branches t)]
+  (insert-down [this t1] (if-let [[sons z] (zipper/z-dn z t)]
                            (let [node [() p sons]]
-                             (->Loc (->treeish t1) node (conj pts t) ->treeish))
+                             (->Loc t1 node z))
                            (throw (ex-info "Can only insert down from a branch" {:loc this :t t}))))
   (delete [this] (if (not= top p)
                    (let [[[l & ls :as lefts] up [r & rs :as rights]] p]
                      (cond
-                       r (->Loc r [lefts up (or rs ())] pts ->treeish)
-                       l (->Loc l [(or ls ()) up rights] pts ->treeish)
-                       true (->Loc (->treeish (zipper/seed (peek pts) ())) up (pop pts) ->treeish)))
+                       r (->Loc r [lefts up (sequence rs)] z)
+                       l (->Loc l [(sequence ls) up rights] z)
+                       true (let [[t z] (zipper/z-up z ())] (->Loc t up z))))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
 (defn zipper
   "Creates a new zipper structure.
 
-  `->treeish` is a fn that, given a (sub)tree, returns a zipper/TreeLike if it is a branch or nil if it is not a branch.
+  `z` is a value that satisfies com.hapgood.zipper/Zip and ensures that branch nodes can be opened and closed consistently.
 
   `root` is the root of the tree."
-  [->treeish root]
-  (->Loc (->treeish root) top [] ->treeish))
+  [z root]
+  (->Loc root top z))
 
 (defn loc? [obj] (instance? Loc obj))
-
-(defmethod print-dup Loc [l w] (print-ctor l (fn [s w] (print-dup (.-t l) w) (print-dup (.-p l) w)) w))
-
-(defmethod print-method Loc [l w] (do (.write w "Loc(")
-                                      (print-method (.-t l) w)
-                                      (.write w ", ")
-                                      (print-method (.-p l) w)
-                                      (.write w ")")))
