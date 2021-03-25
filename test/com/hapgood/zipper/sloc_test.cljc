@@ -122,3 +122,7 @@
             fut (future (do (-> t seq-zip down right left up tree) true))]
         (try (deref fut 500 nil)
              (finally (future-cancel fut))))))
+
+(deftest serialize
+  (let [z (-> '(1 (21 22) 3) list-zip down right down right up)]
+    (is (= 22 (-> (read-string (pr-str z)) down tree)))))

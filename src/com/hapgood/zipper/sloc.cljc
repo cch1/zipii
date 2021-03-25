@@ -66,21 +66,3 @@
   (->Loc root top z))
 
 (defn loc? [obj] (instance? Loc obj))
-
-(remove-method print-dup Siblings)
-(remove-method print-method Siblings)
-;; (defmethod print-dup Siblings [s w] (print-ctor s (fn [s w] (print-dup (.-treeish s) w)) w))
-;; (defmethod print-method Siblings [s w] (do (.write w "Siblings[")
-;;                                            (print-method (.-lefts s) w)
-;;                                            (.write w " ")
-;;                                            (print-method (.-mtree s) w)
-;;                                            (.write w " ")
-;;                                            (print-method (.-rights s) w)
-;;                                            (.write w "]")))
-
-(defmethod print-dup Loc [l w] (print-ctor l (fn [s w] (print-dup (.-t l) w) (print-dup (.-p l) w)) w))
-(defmethod print-method Loc [l w] (do (.write w "ScarLoc(")
-                                      (print-method (.-t l) w)
-                                      (.write w ", ")
-                                      (print-method (.-p l) w)
-                                      (.write w ")")))
