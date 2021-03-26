@@ -7,12 +7,11 @@
   (pivot [this k] "Pivot the elements of this sequential and return a triple of [elements-before element-at elements-after"))
 
 (extend-protocol Pivotable
-  clojure.lang.MapEntry
+  clojure.lang.MapEntry ; the semantics are dubious - we are really pivoting the value (presumably a map!) of this MapEntry.
   (pivot [[_ m] k] (when-let [me (find m k)]
                      (let [mes (vec m)
-                           i (.indexOf (vec m) me)
-                           [befores pivot-and-afters] (split-at i mes)]
-                       [befores me (rest pivot-and-afters)])))
+                           [befores [pivot & afters]] (split-at (.indexOf mes me) mes)]
+                       [befores pivot afters])))
   clojure.lang.IPersistentVector
   (pivot [this k]
     (when-let [v (get this k)]
