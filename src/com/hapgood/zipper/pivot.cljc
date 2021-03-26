@@ -26,4 +26,4 @@
                       (loc/->Loc pivot [lefts (:p this) rights] z)))
   com.hapgood.zipper.sloc.Loc
   (down-to [this k] (when-let [[[lefts pivot rights] z] (z/z-dn (:z this) (:t this) k)]
-                      (loc/->Loc pivot [lefts (:p this) rights] z))))
+                      (sloc/->Loc pivot [lefts (:p this) rights] z))))
