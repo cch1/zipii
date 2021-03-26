@@ -1,0 +1,7 @@
+1. Better documentation -especially around the Zip protocol's differences from the original Clojure implementation which opts for three user-supplied functions for the same functionality.
+
+2. More comprehensive test coverage.
+
+3. A ClojureScript port.  This should not be hard as I have avoided any Java interop and there is no dependency on external libs.
+
+4. A better implementation of the clojure.zip-compatible `remove` function.
