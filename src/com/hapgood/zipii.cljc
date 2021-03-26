@@ -121,8 +121,9 @@
       (right (insert-right youngest tree)))
     (insert-down loc tree)))
 
-(defn- iteratively [n f]
+(defn- iteratively
   "Return a function that composes n applications of f"
+  [n f]
   (fn [x] (loop [i n x x]
             (if (zero? i) x (recur (dec i) (f x))))))
 
@@ -188,8 +189,6 @@
   (let [z (->GeneralZip branch? children make-node [])]
     (loc/zipper z root)))
 
-(defn- fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
-
 (defrecord SeqableZip []
   z/Zip
   (z-dn [this t] (when (seqable? t) [t this] ))
@@ -230,7 +229,7 @@
   z/Zip
   (z-dn [this t] (when (vector? t) [t (VectorZip. (conj parents t))]))
   (z-dn [_ t k] (when (vector? t)
-                  (when-let [[lefts t' rights :as fulcrum] (pivot/pivot t k)]
+                  (when-let [fulcrum (pivot/pivot t k)]
                     [fulcrum (VectorZip. (conj parents t))])))
   (z-up [this branches] [(into (empty (peek parents)) branches) (VectorZip. (pop parents))]))
 
