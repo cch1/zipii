@@ -171,14 +171,11 @@
 (defrecord GeneralZip [branch? children make-node material]
   z/Zip
   (z-dn [_ t] (when (branch? t) [(children t) (GeneralZip. branch? children make-node (conj material t))]))
-  (z-dn [_ t k] (when (branch? t)
-                  (when-let [[lefts t rights :as fulcrum] (pivot/pivot t k)]
-                    [fulcrum (GeneralZip. branch? children make-node (conj material t))])))
   (z-up [_ branches] [(make-node (peek material) branches) (GeneralZip. branch? children make-node (pop material))]) )
 
 ;; https://insideclojure.org/2015/01/02/sequences/
 (defn zipper
-  "Creates a new zipper structure.
+  "Creates a new zipper structure.  Note that zippers created using this function are not serializable.
 
   `branch?` is a predicate fn that returns true if the given (sub)tree can have child branches.
 
@@ -193,33 +190,68 @@
 
 (defn- fill-template [^clojure.lang.IPersistentCollection tree children] (into (empty tree) children))
 
-(def seqable-zip ; generic; mutation will return a tree of lists since we don't now how to fill a template
+(defrecord SeqableZip []
+  z/Zip
+  (z-dn [this t] (when (seqable? t) [t this] ))
+  (z-up [this branches] [branches this]))
+
+(def seqable-zip ; generic; will return a tree of lists since we generally don't now how to reconstitue a seqable
   "Return a zipper for nested seqables, given a root seqable"
-  (partial zipper seqable? identity (fn [tree children] children)))
+  (partial loc/zipper (->SeqableZip)))
+
+(defrecord CollZip [parents]
+  z/Zip
+  (z-dn [this t] (when (coll? t) [(sequence t) (CollZip. (conj parents t))] ))
+  (z-up [this branches] [(into (empty (peek parents)) branches) (CollZip. (pop parents))]))
 
 (def coll-zip
   "Return a zipper for nested collections, given a root collection"
-  (partial zipper coll? identity fill-template))
+  (partial loc/zipper (->CollZip [])))
 
-(def seq-zip
+(defrecord SeqZip []
+  z/Zip
+  (z-dn [this t] (when (seq? t) [(sequence t) this])) ; `sequence` ensures we don't bottom out on nil
+  (z-up [this branches] [branches this]))
+
+(def seq-zip ; generic; will return a tree of lists since we generally don't now how to reconstitue a seq
   "Return a zipper for nested seqs, given a root seq"
-  (partial zipper seq? identity fill-template))
+  (partial loc/zipper (->SeqZip)))
+
+(defrecord ListZip [parents]
+  z/Zip
+  (z-dn [this t] (when (list? t) [t (ListZip. (conj parents t))]))
+  (z-up [this branches] [(reverse (into (empty (peek parents)) branches)) (ListZip. (pop parents))])) ; (comp reverse fill-template)
 
 (def list-zip
   "Return a zipper for nested lists, given a root list"
-  ;; The section fn needs to reverse after filling an empty list
-  (partial zipper list? identity (comp reverse fill-template)))
+  (partial loc/zipper (->ListZip [])))
+
+(defrecord VectorZip [parents]
+  z/Zip
+  (z-dn [this t] (when (vector? t) [t (VectorZip. (conj parents t))]))
+  (z-dn [_ t k] (when (vector? t)
+                  (when-let [[lefts t' rights :as fulcrum] (pivot/pivot t k)]
+                    [fulcrum (VectorZip. (conj parents t))])))
+  (z-up [this branches] [(into (empty (peek parents)) branches) (VectorZip. (pop parents))]))
 
 (def vector-zip
   "Return a zipper for nested vectors, given a root vector"
-  (partial zipper vector? identity fill-template))
+  (partial loc/zipper (->VectorZip [])))
 
 (defn ->me [pr] (if (instance? clojure.lang.MapEntry pr) pr (clojure.lang.MapEntry. (first pr) (second pr) )))
 
+(defrecord MapZip [parents]
+  z/Zip
+  (z-dn [this t] (when (-> t ->me val map?) [(-> t ->me val sequence) (MapZip. (conj parents t))]))
+  (z-dn [_ t k] (when (-> t ->me val map?)
+                  (when-let [fulcrum (pivot/pivot (-> t ->me) k)]
+                    [fulcrum (VectorZip. (conj parents t))])))
+  (z-up [this branches] (let [[k v] (peek parents)]
+                          [(clojure.lang.MapEntry. k (into (empty v) (map ->me) branches)) (MapZip. (pop parents))])))
+
 (def map-zip*
   "Return a zipper for nested map entries, given a root map entry"
-  (let [section (fn [[k children :as tree] children'] (clojure.lang.MapEntry. k (into (empty children) (map ->me) children')))]
-    (partial zipper (comp map? val ->me) (comp sequence val ->me) section)))
+  (partial loc/zipper (->MapZip [])))
 
 (defn map-zip
   "Return a zipper for nested maps, given a root map of children"
@@ -227,7 +259,11 @@
   ([root-key root-children]
    (map-zip* (clojure.lang.MapEntry. root-key root-children))))
 
+(defrecord XMLZip [parents]
+  z/Zip
+  (z-dn [this t] (when (instance? clojure.lang.MapEquivalence t) [(-> t :content sequence) (XMLZip. (conj parents t))]))
+  (z-up [this branches] [(assoc (peek parents) :content (apply vector branches)) (XMLZip. (pop parents))]))
+
 (def xml-zip
   "Return a zipper for xml elements (as from xml/parse), given a root element"
-  (let [section (fn [tree children'] (assoc tree :content (apply vector children')))]
-    (partial zipper (partial instance? clojure.lang.IPersistentMap) (comp sequence :content) section)))
+  (partial loc/zipper (->XMLZip [])))

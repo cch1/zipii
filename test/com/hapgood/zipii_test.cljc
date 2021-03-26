@@ -409,3 +409,7 @@
     (let [z (-> z down right right right (append-child 6))]
       (is (= [4 5 6] (-> z node)))
       (is (= [1 2 3 [4 5 6]] (-> z root))))))
+
+(deftest serialize
+  (doseq [[t z] singleton-zippers]
+    (is (= z (-> z next pr-str read-string prev)))))
