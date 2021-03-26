@@ -15,11 +15,11 @@
   (branches [this] (first (z/z-dn z (z/tree this))))
   z/Zipper
   (left [this] (let [[lefts p' rights] p]
-                 (when-let [[l & ls] (seq lefts)] ; fails for leftmost (thus top)
-                   (->Loc l [(sequence ls) p' (cons t rights)] z))))
+                 (when-first [l lefts] ; fails for leftmost (thus top)
+                   (->Loc l [(rest lefts) p' (cons t rights)] z))))
   (right [this] (let [[lefts p' rights] p]
-                  (when-let [[r & rs] (seq rights)] ; fails for rightmost (thus top)
-                    (->Loc r [(cons t lefts) p' (sequence rs)] z))))
+                  (when-first [r rights] ; fails for rightmost (thus top)
+                    (->Loc r [(cons t lefts) p' (rest rights)] z))))
   (up [this] (when (not= top p)
                (let [[lefts p' rights] p]
                  (->Loc (->Siblings lefts t rights z) p' z))))
@@ -27,8 +27,8 @@
                  (let [[lmts mt rmts] ((juxt :lefts :t :rights) t)]
                    (->Loc mt [lmts p rmts] z))
                  (when-let [[t' z'] (z/z-dn z t)]
-                   (when-let [[c & cs] (seq t')]
-                     (->Loc c [() p (sequence cs)] z')))))
+                   (when-first [c t']
+                     (->Loc c [() p (rest t')] z')))))
   (change [this t] (->Loc t p z))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts p' rights] p
