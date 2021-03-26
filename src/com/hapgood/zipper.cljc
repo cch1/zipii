@@ -24,7 +24,7 @@
 
 (defprotocol Zip
   "Perform up-and-down zip operations.  Like a stack, up is guaranteed to never be called without a preceeding dn"
-  (z-dn [this t] [this t k] "Return a pair of a seq of child branches (or a three-tuple pivoting on k) and a possibly updated Zip, or nil if t is not a branch.")
+  (z-dn [this t] [this t k] "Return a pair of a sequence of child branches (or a three-tuple pivoting on k) and a possibly updated Zip, or nil if t is not a branch.")
   (z-up [this branches] "Return a pair of a new tree with with the supplied branches and a possibly updated Zip"))
 
 (defn nth-child [loc n] (cond

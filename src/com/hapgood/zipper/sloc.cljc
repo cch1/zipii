@@ -1,19 +1,19 @@
 (ns com.hapgood.zipper.sloc
-  (:require [com.hapgood.zipper :as zipper]))
+  (:require [com.hapgood.zipper :as z]))
 
 (defrecord Siblings [lefts t rights z]
-  zipper/Treeish
-  (tree [this] (first (zipper/z-up z (map zipper/tree (concat (reverse lefts) [t] rights))))))
+  z/Treeish
+  (tree [this] (first (z/z-up z (map z/tree (concat (reverse lefts) [t] rights))))))
 
 (def ^:private top
   "A sentinel value representing the path of the tree at the top of a zipper"
   [() nil ()])
 
 (defrecord Loc [t p z]
-  zipper/Treeish
-  (tree [this] (zipper/tree t))
-  (branches [this] (first (zipper/z-dn z (zipper/tree this))))
-  zipper/Zipper
+  z/Treeish
+  (tree [this] (z/tree t))
+  (branches [this] (first (z/z-dn z (z/tree this))))
+  z/Zipper
   (left [this] (let [[lefts p' rights] p]
                  (when-let [[l & ls] (seq lefts)] ; fails for leftmost (thus top)
                    (->Loc l [(sequence ls) p' (cons t rights)] z))))
@@ -26,7 +26,7 @@
   (down [this] (if (instance? Siblings t)
                  (let [[lmts mt rmts] ((juxt :lefts :t :rights) t)]
                    (->Loc mt [lmts p rmts] z))
-                 (when-let [[t' z'] (zipper/z-dn z t)]
+                 (when-let [[t' z'] (z/z-dn z t)]
                    (when-let [[c & cs] (seq t')]
                      (->Loc c [() p (sequence cs)] z')))))
   (change [this t] (->Loc t p z))
@@ -41,8 +41,8 @@
                              (->Loc t node z))
                            (throw (ex-info "Can't insert right of top" {:loc this :t t}))))
   (insert-down [this t1] (if (instance? Siblings t)
-                           (-> this zipper/down (zipper/insert-left t1) zipper/left)
-                           (if-let [[cs z'] (zipper/z-dn z t)]
+                           (-> this z/down (z/insert-left t1) z/left)
+                           (if-let [[cs z'] (z/z-dn z t)]
                              (let [p' [() p cs]]
                                (->Loc t1 p' z'))
                              (throw (ex-info "Can only insert down from a branch" {:loc this :t t})))))
@@ -52,7 +52,7 @@
                        r (->Loc r [lefts parent (sequence rs)] z)
                        l (->Loc l [(sequence ls) parent rights] z)
                        ;; Re-cast the Siblings as a mere Section
-                       true (let [[t' z'] (zipper/z-up z ())]
+                       true (let [[t' z'] (z/z-up z ())]
                               (->Loc t' parent z'))))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 

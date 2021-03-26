@@ -1,4 +1,6 @@
 (ns com.hapgood.zipii
+  "Functions for navigating and editing of tree-like data structures using a zipper
+  This namespace attempts to duplicate the functionality of clojure.zip."
   (:refer-clojure :exclude (replace remove next))
   (:require [com.hapgood.zipper.loc :as loc]
             [com.hapgood.zipper.pivot :as pivot]
@@ -8,9 +10,9 @@
 
 ;; Issues with implementation by Hickey:
 ;; 1. The use of metadata "seems" less idiomatic than a protocol & defrecord.  Performance may or may not suffer (TBD) but the syntax with protocols more closely matches the intent of the code, in my opinion.
-;; 2. Sentinel values like `:end` and `nil` "seem" less idiomatic than namespaced keywords and sentinel objects.
+;; 2. Sentinel values like `:end` "seem" less idiomatic than namespaced keywords.
 ;; 4. There is a bug in the original implementation when deleting the last child of a node in a seq-zip.
-;; 5. The `root` function complects `move` and `return-updated-data-structure`.  In fact, there is no (simple) way to move to the root without also exiting the zipper.  This is surprising and it's not too hard to string together `root` followed by `item` to accomplish the combined effect.
+;; 5. The `root` function complects `move` and `return-updated-data-structure`.  In fact, there is no (simple) way to move to the root without also exiting the zipper.  This is surprising and it's not too hard to string together two simple functions (`root` followed by `node`) to accomplish the combined effect.
 ;; 6. The `changed?` attribute increases performance relative to the base Huet implementation (in which the tree is reconstituted when zipping up regardless of changes) when movement is more vertical, but at the expense of complexity.  I will explore scars for this purpose at some later time.
 ;; 7. The vocabulary diverges from Huet and while Hickey's seems more reasonable, the Huet paper is an excellent implementation guide and sticking to his vocabulary reinforces that effect.
 ;; 8. Exceptions are not very precise nor are they data-laden.
@@ -27,8 +29,6 @@
 (def delete z/delete)
 
 (def nth-child z/nth-child)
-
-;; RH/clojure.zip compatibility: shims and extensions
 
 ;; Iterative navigation
 (defn- make-end
@@ -55,7 +55,7 @@
   (comp ::end meta))
 
 (defn root
-  "Zip all the way up and return the loc of the root, reflecting any changes."
+  "Zip all the way up and return the root, reflecting any changes."
   [loc]
   (z/tree (or (end? loc)
               (loop [loc loc]
@@ -136,7 +136,7 @@
   ;; NB: this condition will not hold if either loc has zip-propogated independent changes up to a shared ancestor.
   ;; The intent of this operation is to "pull" loc0 to a DFS predecessor in its tree, dragging along any zipped changes loc0 may embody.
   ;; To prevent independent changes from being zipped into a parent (and changing their identity), the strategy is to move both locs up
-  ;; until they have identical parents and then move loc0 back through the recorded path of show loc1 arrived at the common ancestor.
+  ;; until they have identical parents and then move loc0 back through the recorded path followed by loc1 to arrive at the common ancestor.
   [loc0 loc1]
   (loop [loc0 loc0 loc1 loc1 s identity]
     (let [[lefts0 parent0 _]  (:p loc0)
@@ -168,10 +168,10 @@
                        children
                        (throw (throw (ex-info "Called children on a leaf node" {::loc loc})))))
 
-(defrecord GeneralZip [branch? children make-node material]
+(defrecord GeneralZip [branch? children make-node parents]
   z/Zip
-  (z-dn [_ t] (when (branch? t) [(children t) (GeneralZip. branch? children make-node (conj material t))]))
-  (z-up [_ branches] [(make-node (peek material) branches) (GeneralZip. branch? children make-node (pop material))]) )
+  (z-dn [_ t] (when (branch? t) [(children t) (GeneralZip. branch? children make-node (conj parents t))]))
+  (z-up [_ branches] [(make-node (peek parents) branches) (GeneralZip. branch? children make-node (pop parents))]) )
 
 ;; https://insideclojure.org/2015/01/02/sequences/
 (defn zipper
