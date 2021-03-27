@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+GVF=$1
+
+VN=$(git describe --abbrev=4 --dirty 2>/dev/null) || VN=v0.0.0
+VN=$(expr "$VN" : v'\(.*\)')
+if test -r $GVF
+then
+	VC=$(sed -e 's/^VERSION = //' <$GVF)
+else
+	VC=unset
+fi
+test "$VN" = "$VC" || {
+	echo "VERSION = $VN" >$GVF
+}
