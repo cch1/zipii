@@ -1,9 +1,9 @@
 (ns com.hapgood.zipper.loc-test
-  (:require [com.hapgood.zipper.loc :refer :all]
+  (:require [com.hapgood.zipper.loc :refer [zipper loc?]]
             [com.hapgood.zipper :as zipper :refer [up down left right insert-left insert-right insert-down change delete nth-child
                                                    tree branches]]
-            [clojure.test :refer [deftest is are]])
-  (:import (clojure.lang ExceptionInfo)))
+            [clojure.test :as test :refer [deftest is]])
+  (:import #?(:clj (clojure.lang ExceptionInfo))))
 
 (defrecord ListZip []
   zipper/Zip
@@ -30,9 +30,9 @@
     (let [z (-> z down (insert-left 0))]
       (is (= 1 (-> z tree)))
       (is (= '(0 1 (21) 3) (-> z up tree))))
-    (let [z (-> z down (insert-right 3/2))]
+    (let [z (-> z down (insert-right 1.5))]
       (is (= 1 (-> z tree)))
-      (is (= '(1 3/2 (21) 3) (-> z up tree))))
+      (is (= '(1 1.5 (21) 3) (-> z up tree))))
     (let [z (-> z (insert-down 0))]
       (is (= 0 (-> z tree)))
       (is (= '(0 1 (21) 3) (-> z up tree))))
@@ -110,17 +110,19 @@
 (def seq-zip (partial zipper (->SeqZip)))
 
 (deftest infinitely-deep-tree
-  (is (let [t ((fn lazy-tree [] (lazy-seq (list (lazy-tree)))))
-            fut (future (do (-> t seq-zip down down down up up up tree) true))]
-        (try (deref fut 500 nil)
-             (finally (future-cancel fut))))))
+  (is (let [t ((fn lazy-tree [] (lazy-seq (list (lazy-tree)))))]
+        #?(:clj (let [fut (future (do (-> t seq-zip down down down up up up tree) true))]
+                  (try (deref fut 500 nil)
+                       (finally (future-cancel fut))))
+           :cljs (do (-> t seq-zip down down down up up up tree) true)))))
 
 (deftest infinitely-wide-tree
-  (is (let [t (range)
-            fut (future (do (-> t seq-zip down right left up tree) true))]
-        (try (deref fut 500 nil)
-             (finally (future-cancel fut))))))
+  (is (let [t (range)]
+        #?(:clj (let [fut (future (do (-> t seq-zip down right left up tree) true))]
+                  (try (deref fut 500 nil)
+                       (finally (future-cancel fut))))
+           :cljs (do (-> t seq-zip down right left up tree) true)))))
 
-(deftest serialize
-  (let [z (-> '(1 (21 22) 3) list-zip down right down right up)]
-    (is (= 21 (-> (read-string (pr-str z)) down tree)))))
+#?(:clj (deftest serialize
+          (let [z (-> '(1 (21 22) 3) list-zip down right down right up)]
+            (is (= 21 (-> (read-string (pr-str z)) down tree))))))

@@ -1,9 +1,13 @@
 (ns com.hapgood.zipii-test
   (:refer-clojure :exclude (replace remove next))
-  (:require [com.hapgood.zipii :refer :all]
+  (:require [com.hapgood.zipii :refer [->me
+                                       up down left right rightmost leftmost next prev end? nth-child root path
+                                       insert-left insert-right insert-child append-down append-child replace edit remove
+                                       seqable-zip seq-zip coll-zip list-zip vector-zip map-zip map-zip* xml-zip
+                                       node children]]
             [com.hapgood.zipper.loc :refer [loc?]]
             [clojure.test :refer [deftest is are]])
-  (:import (clojure.lang ExceptionInfo)))
+  (:import #?(:clj (clojure.lang ExceptionInfo))))
 
 (deftest access-move-query
   (let [t '(1 (21 22) 3)
@@ -32,9 +36,9 @@
     (let [z (-> z down (insert-left 0))]
       (is (= 1 (-> z node)))
       (is (= '(0 1 (21) 3) (-> z root))))
-    (let [z (-> z down (insert-right 3/2))]
+    (let [z (-> z down (insert-right 1.5))]
       (is (= 1 (-> z node)))
-      (is (= '(1 3/2 (21) 3) (-> z root))))))
+      (is (= '(1 1.5 (21) 3) (-> z root))))))
 
 (deftest extended-mutate
   (let [t '(1 (21 22) 3)
@@ -67,7 +71,7 @@
    (pair nil coll-zip)
    (pair nil seq-zip)
    (pair nil list-zip)
-   (pair (clojure.lang.MapEntry. ::root nil) map-zip*)
+   (pair (->me [::root nil]) map-zip*)
    (pair nil vector-zip)
    (pair "" xml-zip)])
 
@@ -76,7 +80,7 @@
    (pair () coll-zip)
    (pair () seq-zip)
    (pair () list-zip)
-   (pair (clojure.lang.MapEntry. ::root {}) map-zip*)
+   (pair (->me [::root {}]) map-zip*)
    (pair [] vector-zip)
    (pair {:content []} xml-zip)])
 
@@ -85,7 +89,7 @@
    (pair '(1) coll-zip)
    (pair '(1) seq-zip)
    (pair '(1) list-zip)
-   (pair (clojure.lang.MapEntry. ::root {:a 1}) map-zip*)
+   (pair (->me [::root {:a 1}]) map-zip*)
    (pair [1] vector-zip)
    (pair {:content [{:tag :a :content []}]} xml-zip)])
 
@@ -126,8 +130,7 @@
     (is (thrown? ExceptionInfo (-> z remove)))
     (is (thrown? ExceptionInfo (-> z (insert-right nil))))
     (is (thrown? ExceptionInfo (-> z (insert-left nil))))
-    (is (loc? (-> z (insert-child [:a 1])))
-        (format "Shit doesn't work: %s %s" t z))
+    (is (loc? (-> z (insert-child [:a 1]))))
     (is (loc? (-> [] vector-zip (insert-child [:a 1])))))
   (doseq [[t z] singleton-zippers]
     (is (= t (let [z (-> z down)
@@ -174,8 +177,8 @@
         z (list-zip t)]
     (is (= '(1 2 (30 31 32) 4) (-> z down right right down (insert-left 30) root)))
     (is (= '(1 2 (31 32 33) 4) (-> z down right right down right (insert-right 33) root)))
-    (is (thrown? Exception (-> z (insert-right 33))))
-    (is (thrown? Exception (-> z (insert-left 33))))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z (insert-right 33))))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z (insert-left 33))))
     (is (= '(1 2 3 4) (-> z down right right (replace 3) root)))
     (is (= '(0 2 (31 32) 4) (-> z down (edit dec) root)))
     (is (= '(0 1 2 (31 32) 4) (-> z (insert-child 0) root)))
@@ -200,22 +203,13 @@
   (let [t '(1 2 (31 32) 4)
         z (list-zip t)]
     (is (= '(1 2 4) (-> z down right right remove root)))
-    (is (thrown? Exception (-> z remove)))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z remove)))
     (is (= '(1 2 () 4) (-> z down right right down right remove remove root)))
     (is (= `(1 2 4) (-> z down right right down right remove remove remove root)))
     ;; This next one exposes a bug in clojure.zip...
     (is (= () (-> (list-zip '(0)) down remove node)))))
 
 ;; MapZipper
-#_ (deftest map-zip-Zipper
-     (let [t {:a 1 :b 2 :c {:d 3 :e 4}}]
-       (is (= t (val (node (map-zip t)))))
-       (is (= [::root t] (node (map-zip ::root t))))
-       (is (branch? (map-zip t)))
-       (is (= t (children (map-zip t))))
-       #_ (is (= t (let [nzip (map-zip t)] (make-node nzip (node t) t))))
-       (is (nil? (parent (map-zip root))))))
-
 (deftest map-zip-hierarchical-navigation
   (let [grandchild {:c 3}
         child {:b grandchild}
@@ -253,8 +247,8 @@
         z (map-zip ::root t)]
     (is (= [::root {:a 1 :b 2 :c {:c0 30 :c1 31 :c2 32} :f 5}] (-> z down right right down (insert-left [:c0 30]) root)))
     (is (= [::root {:a 1 :b 2 :c {:c1 31 :c2 32 :c3 33} :f 5}] (-> z down right right down right (insert-right [:c3 33]) root)))
-    (is (thrown? Exception (-> z (insert-right [:z 33]))))
-    (is (thrown? Exception (-> z (insert-left [:z 33]))))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z (insert-right [:z 33]))))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z (insert-left [:z 33]))))
     (is (= [::root {:a 1 :b 2 :c 3 :f 5}] (-> z down right right (replace [:c 3]) root)))
     (is (= [::root {:a 0 :b 2 :c {:c1 31 :c2 32} :f 5}] (-> z down (edit #(update % 1 dec)) root)))
     (is (= [::root {:z 0 :a 1 :b 2 :c {:c1 31 :c2 32} :f 5}] (-> z (insert-child [:z 0]) root)))
@@ -279,7 +273,7 @@
   (let [t {:a 1 :b 2 :c {:c1 31 :c2 32} :f 5}
         z (map-zip ::root t)]
     (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right remove root)))
-    (is (thrown? Exception (-> z remove)))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z remove)))
     (is (= [::root {:a 1 :b 2 :c {} :f 5}] (-> z down right right down right remove remove root)))
     (is (= [::root {:a 1 :b 2 :f 5}] (-> z down right right down right remove remove remove root)))
     (is (= [::root {}] (-> (map-zip ::root {:a 1}) down remove node)))))
@@ -327,8 +321,8 @@
         z (vector-zip t)]
     (is (= [1 2 [30 31 32] 4] (-> z down right right down (insert-left 30) root)))
     (is (= [1 2 [31 32 33] 4] (-> z down right right down right (insert-right 33) root)))
-    (is (thrown? Exception (-> z (insert-right 33))))
-    (is (thrown? Exception (-> z (insert-left 33))))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z (insert-right 33))))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z (insert-left 33))))
     (is (= [1 2 3 4] (-> z down right right (replace 3) root)))
     (is (= [0 2 [31 32] 4] (-> z down (edit dec) root)))
     (is (= [0 1 2 [31 32] 4] (-> z (insert-child 0) root)))
@@ -352,7 +346,7 @@
   (let [t [1 2 [31 32] 4]
         z (vector-zip t)]
     (is (= [1 2 4] (-> z down right right remove root)))
-    (is (thrown? Exception (-> z remove)))
+    (is (thrown? #?(:clj Exception :cljs js/Error) (-> z remove)))
     (is (= [1 2 [] 4] (-> z down right right down right remove remove root)))
     (is (= [1 2 4] (-> z down right right down right remove remove remove root)))
     (is (= [] (-> (vector-zip [0]) down remove node)))))
@@ -369,25 +363,25 @@
 
 (deftest preserve-type-on-edit
   (let [t (sorted-set 1 2 3)]
-    (is (instance? (class t)
+    (is (instance? (type t)
                    (-> t coll-zip down right (edit dec) root))))
   (let [t (list 1 2 3)]
-    (is (instance? (class t)
+    (is (instance? (type t)
                    (-> t list-zip down right (edit dec) root))))
   (let [t (sorted-map :a 1 :b 2 :c 3)]
-    (is (instance? (class t)
+    (is (instance? (type t)
                    (-> t map-zip down right (edit #(update % 1 dec)) root val))))
-  (let [t (vector-of :long 1 2 3)]
-    (is (instance? (class t)
-                   (-> t vector-zip down right (edit inc) root)))))
+  #?(:clj (let [t (vector-of :long 1 2 3)]
+            (is (instance? (type t)
+                           (-> t vector-zip down right (edit inc) root))))))
 
 ;; RH compatibility shims
 (deftest replace-shim
   (let [t [1 2 3 [4 5]]
         z (vector-zip t)]
-    (let [z (-> z down right right right down (replace 9/2))]
-      (is (= 9/2 (-> z node)))
-      (is (= [1 2 3 [9/2 5]] (-> z root))))))
+    (let [z (-> z down right right right down (replace 4.5))]
+      (is (= 4.5 (-> z node)))
+      (is (= [1 2 3 [4.5 5]] (-> z root))))))
 
 (deftest remove-shim
   (let [t [1 2 3 [4 5]]
@@ -399,9 +393,9 @@
 (deftest insert-child-shim
   (let [t [1 2 3 [4 5]]
         z (vector-zip t)]
-    (let [z (-> z down right right right (insert-child 7/2))]
-      (is (= [7/2 4 5] (-> z node)))
-      (is (= [1 2 3 [7/2 4 5]] (-> z root))))))
+    (let [z (-> z down right right right (insert-child 3.5))]
+      (is (= [3.5 4 5] (-> z node)))
+      (is (= [1 2 3 [3.5 4 5]] (-> z root))))))
 
 (deftest append-child-shim
   (let [t [1 2 3 [4 5]]
@@ -410,6 +404,6 @@
       (is (= [4 5 6] (-> z node)))
       (is (= [1 2 3 [4 5 6]] (-> z root))))))
 
-(deftest serialize
-  (doseq [[t z] singleton-zippers]
-    (is (= z (-> z next pr-str read-string prev)))))
+#?(:clj (deftest serialize
+          (doseq [[t z] singleton-zippers]
+            (is (= z (-> z next pr-str read-string prev))))))

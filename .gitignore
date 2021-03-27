@@ -3,3 +3,4 @@
 /.nrepl-port
 /.make.*
 /classes
+/cljs-test-runner-out

@@ -237,7 +237,7 @@
   "Return a zipper for nested vectors, given a root vector"
   (partial loc/zipper (->VectorZip [])))
 
-(defn ->me [pr] (if (map-entry? pr) pr (clojure.lang.MapEntry. (first pr) (second pr) )))
+(defn ->me [pr] (if (map-entry? pr) pr #?(:clj (clojure.lang.MapEntry. (first pr) (second pr)) :cljs (cljs.core/MapEntry. (first pr) (second pr) nil))))
 
 (defrecord MapZip [parents]
   z/Zip

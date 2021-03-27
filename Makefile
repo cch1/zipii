@@ -41,7 +41,7 @@ $(target)/:
 	mkdir -p $@
 
 .PHONY: test # Run the Clojure and ClojureScript test suites
-test: .make.test-clj
+test: .make.test-clj .make.test-cljs
 
 .make.test-clj: deps.edn $(testfiles) $(srcfiles)
 	clojure -M:test:project/test-clj

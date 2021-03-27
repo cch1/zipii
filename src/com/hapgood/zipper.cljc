@@ -19,8 +19,12 @@
 (extend-protocol Treeish
   nil
   (tree [this] this)
-  Object
-  (tree [this] this))
+  #?@(:cljs (object
+             (tree [this] this)
+             number
+             (tree [this] this))
+      :clj (Object
+            (tree [this] this))))
 
 (defprotocol Zip
   "Perform up-and-down zip operations.  Like a stack, up is guaranteed to never be called without a preceeding dn"

@@ -1,6 +1,6 @@
 (ns com.hapgood.zipper.pivot-test
   (:refer-clojure :exclude [replace next remove])
-  (:require [com.hapgood.zipii :refer :all]
+  (:require [com.hapgood.zipii :refer [vector-zip map-zip node]]
             [com.hapgood.zipper.pivot :refer [down-to]]
             [clojure.test :refer [deftest is are]]))
 

@@ -1,7 +1,7 @@
 (ns com.hapgood.zipper-test
-  (:require [com.hapgood.zipper :as zipper :refer :all]
+  (:require [com.hapgood.zipper :as zipper :refer [nth-child tree]]
             [com.hapgood.zipper.loc :as loc]
-            [clojure.test :refer [deftest is are]]))
+            [clojure.test :as test :refer [deftest is]]))
 
 (defrecord ListZip []
   zipper/Zip
