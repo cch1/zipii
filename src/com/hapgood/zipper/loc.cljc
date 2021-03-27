@@ -16,38 +16,38 @@
   z/Zipper
   (left [this] (let [[lefts up rights] p]
                  (when-first [l lefts] ; fails for leftmost (thus top)
-                   (->Loc l [(rest lefts) up (cons t rights)] z))))
+                   (Loc. l [(rest lefts) up (cons t rights)] z))))
   (right [this] (let [[lefts up rights] p]
                   (when-first [r rights] ; fails for rightmost (thus top)
-                    (->Loc r [(cons t lefts) up (rest rights)] z))))
+                    (Loc. r [(cons t lefts) up (rest rights)] z))))
   (up [this] (when (not= top p)
                (let [[lefts up rights] p
                      [t z] (z/z-up z (concat (reverse lefts) (cons t rights)))]
-                 (->Loc t up z))))
+                 (Loc. t up z))))
   (down [this] (when-let [[trees z] (z/z-dn z t)]
                  (when-first [t1 trees]
-                   (->Loc t1 [() p (rest trees)] z))))
-  (change [this t'] (->Loc t' p z))
+                   (Loc. t1 [() p (rest trees)] z))))
+  (change [this t'] (Loc. t' p z))
   (insert-left [this l] (if (not= top p)
                           (let [[lefts up rights] p
                                 node [(cons l lefts) up rights]]
-                            (->Loc t node z))
+                            (Loc. t node z))
                           (throw (ex-info "Can't insert left of top" {:loc this :t t}))))
   (insert-right [this r] (if (not= top p)
                            (let [[lefts up rights] p
                                  node [lefts up (cons r rights)]]
-                             (->Loc t node z))
+                             (Loc. t node z))
                            (throw (ex-info "Can't insert right of top" {:loc this :t t}))))
   (insert-down [this t1] (if-let [[sons z] (z/z-dn z t)]
                            (let [node [() p sons]]
-                             (->Loc t1 node z))
+                             (Loc. t1 node z))
                            (throw (ex-info "Can only insert down from a branch" {:loc this :t t}))))
   (delete [this] (if (not= top p)
                    (let [[[l & ls :as lefts] up [r & rs :as rights]] p]
                      (cond
-                       r (->Loc r [lefts up (sequence rs)] z)
-                       l (->Loc l [(sequence ls) up rights] z)
-                       true (let [[t z] (z/z-up z ())] (->Loc t up z))))
+                       r (Loc. r [lefts up (sequence rs)] z)
+                       l (Loc. l [(sequence ls) up rights] z)
+                       true (let [[t z] (z/z-up z ())] (Loc. t up z))))
                    (throw (ex-info "Can't remove at top" {:loc this :t t})))))
 
 (defn zipper
