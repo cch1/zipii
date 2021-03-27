@@ -246,7 +246,7 @@
                   (when-let [fulcrum (pivot/pivot (-> t ->me) k)]
                     [fulcrum (VectorZip. (conj parents t))])))
   (z-up [this branches] (let [[k v] (peek parents)]
-                          [(clojure.lang.MapEntry. k (into (empty v) (map ->me) branches)) (MapZip. (pop parents))])))
+                          [(->me [k (into (empty v) (map ->me) branches)]) (MapZip. (pop parents))])))
 
 (def map-zip*
   "Return a zipper for nested map entries, given a root map entry"
@@ -256,11 +256,11 @@
   "Return a zipper for nested maps, given a root map of children"
   ([root-children] (map-zip ::root root-children))
   ([root-key root-children]
-   (map-zip* (clojure.lang.MapEntry. root-key root-children))))
+   (map-zip* (->me [root-key root-children]))))
 
 (defrecord XMLZip [parents]
   z/Zip
-  (z-dn [this t] (when (instance? clojure.lang.MapEquivalence t) [(-> t :content sequence) (XMLZip. (conj parents t))]))
+  (z-dn [this t] (when (map? t) [(-> t :content sequence) (XMLZip. (conj parents t))]))
   (z-up [this branches] [(assoc (peek parents) :content (apply vector branches)) (XMLZip. (pop parents))]))
 
 (def xml-zip
