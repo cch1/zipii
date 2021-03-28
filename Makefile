@@ -55,7 +55,7 @@ test: .make.test-clj .make.test-cljs
 lint: .make.lint
 
 .make.lint: $(srcfiles)
-	-clojure -M:lint/kondo
+	clojure -M:lint/kondo ; test $$? -lt 3
 	touch .make.lint
 
 $(pom-file): deps.edn | $(target)/
