@@ -71,12 +71,12 @@ pom: $(pom-file)
 .PHONY: jar # Build the jar file
 jar: assert-clean $(jar-file)
 
-install: zipii.jar
-	clojure -X:project/install
+install: $(jar-file)
+	clojure -X:deps mvn-install :jar \"$(jar-file)\"
 
 .PHONY: deploy # Deploy the jar file to Clojars
 deploy: $(jar-file)
-	env CLOJARS_USERNAME=$(CLOJARS_USERNAME) CLOJARS_PASSWORD=$(CLOJARS_PASSWORD) clj -M:project/deploy $(jar-file)
+	env CLOJARS_USERNAME=$(CLOJARS_USERNAME) CLOJARS_PASSWORD=$(CLOJARS_PASSWORD) clojure -M:project/clojars $(jar-file)
 
 clean:
 	rm -f pom.xml pom.xml.asc zipii.jar
