@@ -2,6 +2,12 @@
 
 This library implements zippers as published in [Functional Pearl, The Zipper](https://www.st.cs.uni-saarland.de/edu/seminare/2005/advanced-fp/docs/huet-zipper.pdf) by Gérard Huet.  It also provides a namespace (`com.hapgood.zipii`) with a high degree of compatibility with the original Clojure implementation in [clojure.zip](https://github.com/clojure/clojure/blob/master/src/clj/clojure/zip.clj).
 
+[![Clojars Project](https://img.shields.io/clojars/v/com.hapgood/zipii.svg)](https://clojars.org/com.hapgood/zipii)
+
+[![](https://cljdoc.org/badge/com.hapgood/zipii)](https://cljdoc.org/d/com.hapgood/zipii/CURRENT)
+
+[![Build Status](https://travis-ci.org/cch1/zipii.svg?branch=master)](https://travis-ci.org/cch1/zipii)
+
 ### Goals ###
 In rough priority order, the goals of this implementation are as follows:
 
