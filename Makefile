@@ -75,7 +75,7 @@ install: $(jar-file)
 	clojure -X:deps mvn-install :jar \"$(jar-file)\"
 
 .PHONY: deploy # Push repository to GitHub & Deploy the jar file to Clojars
-deploy: test lint $(jar-file)
+deploy: test lint $(jar-file) $(pom-file)
 	git push
 	env CLOJARS_USERNAME=$(CLOJARS_USERNAME) CLOJARS_PASSWORD=$(CLOJARS_PASSWORD) clojure -X:project/deploy :pom-file \"$(pom-file)\" :artifact \"$(jar-file)\"
 
