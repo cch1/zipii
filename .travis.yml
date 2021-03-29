@@ -1,0 +1,16 @@
+os: linux
+dist: trusty
+language: java
+script: make test
+install:
+  - curl -O https://download.clojure.org/install/linux-install-1.10.1.708.sh
+  - chmod +x linux-install-1.10.1.708.sh
+  - sudo ./linux-install-1.10.1.708.sh
+jdk:
+  - oraclejdk8
+cache:
+  directories:
+    - $HOME/.m2
+    - $HOME/.gitlibs
+    - .cpcache
+    - cljs-test-runner-out
