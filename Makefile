@@ -74,10 +74,10 @@ jar: assert-clean $(jar-file)
 install: $(jar-file)
 	clojure -X:deps mvn-install :jar \"$(jar-file)\"
 
-.PHONY: deploy # Deploy the jar file to Clojars & push repository to GitHub
+.PHONY: deploy # Push repository to GitHub & Deploy the jar file to Clojars
 deploy: test lint $(jar-file)
 	git push
-	env CLOJARS_USERNAME=$(CLOJARS_USERNAME) CLOJARS_PASSWORD=$(CLOJARS_PASSWORD) clj -X:project/deploy :pom-file \"$(pom-file)\" :artifact \"$(jar-file)\"
+	env CLOJARS_USERNAME=$(CLOJARS_USERNAME) CLOJARS_PASSWORD=$(CLOJARS_PASSWORD) clojure -X:project/deploy :pom-file \"$(pom-file)\" :artifact \"$(jar-file)\"
 
 .PHONY: clean # Remove build artifacts
 clean:

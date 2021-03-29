@@ -34,7 +34,8 @@
 
            ;; Next, push code (and tags) to github to ensure they are available when cljdocs goes to find articles.
            ;; And then, only after the tagged commit is on GitHub:
-           ;; $ env CLOJARS_USERNAME=cch1 CLOJARS_PASSWORD=<redacted> clj -M:project/deploy zipii.jar
-           :project/deploy {:main-opts ["-m" "deps-deploy.deps-deploy" "deploy" "zipii.jar" false]
-                            :replace-deps {slipset/deps-deploy {:mvn/version "RELEASE"}
-                                           org.slf4j/slf4j-nop {:mvn/version "RELEASE"}}}}}
+           ;; $ env CLOJARS_USERNAME=cch1 CLOJARS_PASSWORD=<redacted> clojure -X:project/deploy :pom-file <pom> :artifact <jar>
+           :project/deploy {:extra-deps {slipset/deps-deploy {:mvn/version "RELEASE"}}
+                            :exec-fn deps-deploy.deps-deploy/deploy
+                            :exec-args {:installer :remote
+                                        :sign-releases? false}}}}
