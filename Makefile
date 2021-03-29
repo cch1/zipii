@@ -74,10 +74,12 @@ jar: assert-clean $(jar-file)
 install: $(jar-file)
 	clojure -X:deps mvn-install :jar \"$(jar-file)\"
 
-.PHONY: deploy # Deploy the jar file to Clojars
-deploy: $(jar-file)
-	env CLOJARS_USERNAME=$(CLOJARS_USERNAME) CLOJARS_PASSWORD=$(CLOJARS_PASSWORD) clojure -M:project/clojars $(jar-file)
+.PHONY: deploy # Deploy the jar file to Clojars & push repository to GitHub
+deploy: test lint $(jar-file)
+	git push
+	env CLOJARS_USERNAME=$(CLOJARS_USERNAME) CLOJARS_PASSWORD=$(CLOJARS_PASSWORD) clj -X:project/deploy :pom-file \"$(pom-file)\" :artifact \"$(jar-file)\"
 
+.PHONY: clean # Remove build artifacts
 clean:
 	rm -f pom.xml pom.xml.asc zipii.jar
 	rm -rf target/*
