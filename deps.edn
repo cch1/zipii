@@ -12,7 +12,7 @@
            ;; --------------------------- Build/Deploy Tasks ----------------------------
            ;; Bump the version by a patch and generate a corresponding pom file with the groupId "com.hapgood"
            ;; $ clojure -M:project/pom patch -t IncrementType
-           :project/pom {:main-opts ["-m" "garamond.main" "--group-id" "com.hapgood" "--scm-url" "https://github.com/cch1/zipii" "-p"]
+           :project/pom {:main-opts ["-m" "garamond.main" "--group-id" "com.hapgood" "--artifact-id" "zipii" "--scm-url" "https://github.com/cch1/zipii" "-p"]
                          ;; because we don't need the project's dependencies loaded
                          :replace-deps {com.workframe/garamond {:mvn/version "0.4.0"}}}
            ;; $ clojure -X:project/jar

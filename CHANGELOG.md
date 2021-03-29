@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file. This change
 
 Versioning is managed using git tags as implemented in the Makefile.  The pom file is generated using [garamond](https://github.com/workframers/garamond) and it defers to the same git tags.
 
-## [Unreleased](https://github.com/cch1/zipii/compare/v0.2.0...HEAD)
+## [Unreleased](https://github.com/cch1/zipii/compare/v0.3.0...HEAD)
+## [0.3.0](https://github.com/cch1/zipii/compare/v0.2.0...v0.3.0)
+### Fixed
+- Corrected artifact id in generated pom file.
 ## [0.2.0](https://github.com/cch1/zipii/compare/v0.1.0...v0.2.0)
 ### Update
 - Refactoring to (partially) satisfy linter.
